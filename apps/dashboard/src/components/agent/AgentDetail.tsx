@@ -6,6 +6,7 @@ import type { Delegation } from "@jipsa/delegation";
 import { Button, Card, Chip, Gauge, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
 import { RevokeButton } from "./RevokeButton.js";
+import { LiveFeed } from "../feed/LiveFeed.js";
 
 export function AgentDetail({
   agent,
@@ -95,9 +96,10 @@ export function AgentDetail({
         )}
       </Card>
 
-      {/* ③ 실시간 피드는 M3 */}
-      <Card className="text-sm text-muted">
-        실시간 지출 피드는 M3에서 붙입니다.{" "}
+      {/* ③ 실시간 지출 피드 */}
+      <LiveFeed owner={binding.owner} />
+
+      <p className="text-[11px] text-muted">
         <a
           className="text-blue hover:underline"
           href={explorerAddress(agent)}
@@ -106,7 +108,7 @@ export function AgentDetail({
         >
           익스플로러에서 에이전트 활동 보기 →
         </a>
-      </Card>
+      </p>
     </section>
   );
 }

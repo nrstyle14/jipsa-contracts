@@ -16,6 +16,14 @@ export default {
         muted: "#8FA3B5",
       },
       borderRadius: { card: "12px", btn: "8px" },
+      keyframes: {
+        // 신규 피드 행은 위에서 슬라이드 인 (설계서 §5.3)
+        slidein: {
+          from: { opacity: "0", transform: "translateY(-4px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+      },
+      animation: { slidein: "slidein .2s ease-out" },
       fontFamily: { sans: ["Pretendard", "system-ui", "sans-serif"] },
     },
   },
