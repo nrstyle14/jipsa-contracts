@@ -11,14 +11,19 @@ src/
 │   └── IVerifiedGate.sol         # 신원 검증 게이트 추상화
 ├── gates/
 │   ├── DojangVerifiedGate.sol    # Dojang Verified Address 기반 검증 (실전용)
-│   └── MockVerifiedGate.sol      # 데모/테스트용 mock (플랜 B)
+│   └── MockVerifiedGate.sol      # 테스트 전용 mock (배포 스크립트에서는 사용 안 함)
+├── JipsaSettlementToken.sol      # tKRW — 데모용 정산 토큰 (스테이블코인 아님)
 ├── OwnerBindingRegistry.sol      # 에이전트 지갑 ↔ 검증된 주인 바인딩
 └── PolicyAccount.sol             # 지출 정책이 강제되는 에이전트 컨트랙트 지갑
 script/
 └── Deploy.s.sol
 test/
-├── PolicyAccount.t.sol           # MockVerifiedGate 기반 단위 테스트
-└── DojangVerifiedGate.fork.t.sol # GIWA Sepolia 포크 테스트
+├── JipsaSettlementToken.t.sol    # 토큰 (역할, faucet 쿨다운, pause, permit)
+├── OwnerBindingRegistry.t.sol    # 바인딩 (프런트러닝 차단, 제안 취소)
+├── PolicyAccount.t.sol           # 지출 정책 단위 테스트
+├── ForkTestBase.sol              # 포크 테스트 공통 상수·가드
+├── DojangVerifiedGate.fork.t.sol # 실제 DojangScroll 조회 검증
+└── PolicyAccount.fork.t.sol      # 실제 도장으로 바인딩→지출 통합 검증
 ```
 
 ## GIWA 세폴리아 네트워크 정보
@@ -50,15 +55,56 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 
 출처: https://docs.giwa.io/giwa-ecosystem/dojang/contracts
 
+## 배포 주소 (GIWA Sepolia)
+
+배포 후 채운다.
+
+| 컨트랙트 | 주소 |
+|---|---|
+| JipsaSettlementToken (tKRW) | _(미배포)_ |
+| DojangVerifiedGate | _(미배포)_ |
+| OwnerBindingRegistry | _(미배포)_ |
+
+## 정산 토큰 — tKRW
+
+결제 수단은 배포 시 고정되는 단일 ERC-20 `JipsaSettlementToken`(tKRW, 6 decimals) 하나다.
+
+> ⚠️ **무담보 테스트 정산 토큰이며 스테이블코인이 아니다.** 원화 담보도, 상환 청구권도,
+> 감사도 없고 가치를 보장하지 않는다. 데모 전용이다.
+
+다만 EIP-2612(`permit`), 6 decimals 등 **실물 스테이블코인이 통상 제공하는 인터페이스에
+맞춰 두었다.** 메인넷에서는 규제 적합 스테이블코인으로 교체하며, `PolicyAccount`는
+`IERC20`만 알고 있으므로 배포 시 토큰 주소만 바꾸면 된다.
+
+데모 편의를 위해 `faucet()`이 호출자에게 1,000 tKRW를 민팅한다 (주소당 24시간 쿨다운).
+
+### 자금 투입
+
+주인이 tKRW를 `PolicyAccount` 주소로 **직접 transfer** 한다. approve 플로우는 없다.
+
+## 한계 (현재 설계에서 의도적으로 제외한 것)
+
+- **임의 call 없음**: 기존 `execute(address,uint256,bytes)`를 제거했다. 임의 call이 열려
+  있으면 에이전트가 approve·다단계 호출로 한도 밖 손실을 만들 수 있어 "피해가 위임 한도
+  안에 갇힌다"는 보장이 성립하지 않는다. 남아 있는 저수준 call은 `revoke()`가 오입금된
+  ETH를 주인에게 되돌려주는 경로 하나뿐이다.
+- **단일 토큰 전용**: 계정당 토큰 하나만 취급한다. 멀티토큰은 정책 한도의 의미가
+  토큰별로 갈라져 통제가 흐려지므로 범위에서 제외했다.
+- **EIP-3009는 로드맵**: 가맹처가 가스를 대납하는 `transferWithAuthorization` 흐름은
+  아직 넣지 않았다.
+- **업그레이드 프록시 없음**: 모든 컨트랙트가 불변이다. 변경은 재배포로 처리한다.
+
 ## 시작하기
 
 ```bash
-git submodule update --init --recursive   # lib/forge-std
+git submodule update --init --recursive   # lib/forge-std, lib/openzeppelin-contracts
 forge build
 forge test -vvv
 
 # DojangScroll 실제 조회를 검증하는 포크 테스트 포함
-forge test --fork-url https://sepolia-rpc.giwa.io
+# 블록을 고정하면 Foundry가 포크 상태를 캐시한다 — 재실행이 빨라지고
+# 공개 RPC의 rate limit(HTTP 429)에 걸리지 않는다. 고정 없이 반복 실행하면 429로 실패할 수 있다.
+forge test --fork-url https://sepolia-rpc.giwa.io --fork-block-number 31869189
 
 # 배포 (환경변수: PRIVATE_KEY)
 forge script script/Deploy.s.sol --rpc-url https://sepolia-rpc.giwa.io --broadcast
@@ -70,5 +116,5 @@ forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
 
 ## ⚠️ 배포 전 확인 사항 (TODO)
 
-1. **Verified Address 발급**: TESTNET FAUCET attester로 본인 지갑에 발급 가능한지 확인 (buidl@giwa.io 문의 중). 불가 시 `MockVerifiedGate` 사용하고 문서에 명시.
-2. **verify 명령의 verifier-url**: 익스플로러 API 경로 실제 확인 필요.
+1. **verify 명령의 verifier-url**: 익스플로러 API 경로 실제 확인 필요.
+2. **배포 주소 표 채우기**: 배포 후 위 표를 실제 주소로 갱신.

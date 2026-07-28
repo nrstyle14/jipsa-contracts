@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ForkTestBase} from "./ForkTestBase.sol";
+import {JipsaSettlementToken} from "../src/JipsaSettlementToken.sol";
 import {DojangVerifiedGate} from "../src/gates/DojangVerifiedGate.sol";
 import {OwnerBindingRegistry} from "../src/OwnerBindingRegistry.sol";
 import {PolicyAccount} from "../src/PolicyAccount.sol";
@@ -14,6 +15,7 @@ import {PolicyAccount} from "../src/PolicyAccount.sol";
 ///   forge test --match-path test/PolicyAccount.fork.t.sol \
 ///     --fork-url https://sepolia-rpc.giwa.io
 contract PolicyAccountForkTest is ForkTestBase {
+    JipsaSettlementToken token;
     DojangVerifiedGate gate;
     OwnerBindingRegistry registry;
 
@@ -22,26 +24,30 @@ contract PolicyAccountForkTest is ForkTestBase {
     address agent = makeAddr("agent");
     address merchant = makeAddr("merchant");
 
+    uint256 constant FUNDING = 100_000e6;
+    uint256 constant PER_TX_CAP = 1_000e6;
+
     /// @dev 게이트·레지스트리 배포 후 주인↔에이전트 바인딩까지 마친 정책 지갑 생성.
     ///      포크에서만 호출된다 (chainid 가드 통과 후).
     function _bindAndFund(bool verifiedRecipientOnly) internal returns (PolicyAccount) {
+        token = new JipsaSettlementToken();
         gate = _deployGate();
         registry = new OwnerBindingRegistry(gate);
 
         vm.prank(owner);
         registry.proposeBinding(agent);
         vm.prank(agent);
-        registry.acceptBinding();
+        registry.acceptBinding(owner);
 
         PolicyAccount.Policy memory p = PolicyAccount.Policy({
-            totalBudget: 1 ether,
-            perTxCap: 0.1 ether,
-            dailyCap: 0.5 ether,
+            totalBudget: FUNDING,
+            perTxCap: PER_TX_CAP,
+            dailyCap: 10_000e6,
             validUntil: uint64(block.timestamp + 7 days),
             verifiedRecipientOnly: verifiedRecipientOnly
         });
-        PolicyAccount acct = new PolicyAccount(owner, agent, registry, gate, p);
-        vm.deal(address(acct), 1 ether);
+        PolicyAccount acct = new PolicyAccount(owner, agent, registry, gate, token, p);
+        token.mint(address(acct), FUNDING);
         return acct;
     }
 
@@ -55,10 +61,10 @@ contract PolicyAccountForkTest is ForkTestBase {
         assertTrue(registry.isAccountableAgent(agent), "agent should be accountable via the real gate");
 
         vm.prank(agent);
-        account.execute(merchant, 0.05 ether, "");
+        account.pay(merchant, PER_TX_CAP);
 
-        assertEq(merchant.balance, 0.05 ether, "merchant should receive the payment");
-        assertEq(account.spentTotal(), 0.05 ether, "spend should be recorded");
+        assertEq(token.balanceOf(merchant), PER_TX_CAP, "merchant should receive the payment");
+        assertEq(account.spentTotal(), PER_TX_CAP, "spend should be recorded");
     }
 
     /// @notice 도장이 없는 주소는 실제 게이트에서 주인으로 등록되지 않는다.
@@ -85,14 +91,16 @@ contract PolicyAccountForkTest is ForkTestBase {
         // 도장 없는 수신처 → 차단
         vm.prank(agent);
         vm.expectRevert(abi.encodeWithSelector(PolicyAccount.RecipientNotVerified.selector, merchant));
-        account.execute(merchant, 0.01 ether, "");
+        account.pay(merchant, PER_TX_CAP);
 
         // 실제 도장 보유 수신처 → 허용
-        uint256 before = VERIFIED_SUBJECT.balance;
+        uint256 before = token.balanceOf(VERIFIED_SUBJECT);
         vm.prank(agent);
-        account.execute(VERIFIED_SUBJECT, 0.01 ether, "");
+        account.pay(VERIFIED_SUBJECT, PER_TX_CAP);
 
-        assertEq(VERIFIED_SUBJECT.balance, before + 0.01 ether, "verified recipient should receive the payment");
-        assertEq(account.spentTotal(), 0.01 ether, "only the allowed spend should be recorded");
+        assertEq(
+            token.balanceOf(VERIFIED_SUBJECT), before + PER_TX_CAP, "verified recipient should receive the payment"
+        );
+        assertEq(account.spentTotal(), PER_TX_CAP, "only the allowed spend should be recorded");
     }
 }

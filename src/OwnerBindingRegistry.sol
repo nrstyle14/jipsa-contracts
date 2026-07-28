@@ -23,12 +23,18 @@ contract OwnerBindingRegistry {
     event BindingProposed(address indexed owner, address indexed agent);
     event BindingAccepted(address indexed owner, address indexed agent);
     event BindingRevoked(address indexed owner, address indexed agent);
+    event BindingProposalCancelled(address indexed owner, address indexed agent);
 
     error OwnerNotVerified(address owner);
     error AgentAlreadyBound(address agent);
     error NoPendingProposal(address agent);
     error NotOwnerOfAgent(address caller, address agent);
+    error NotProposer();
     error ZeroAddress();
+
+    /// @param expected 에이전트가 수락하려던 주인
+    /// @param actual 실제로 대기 중인 제안자
+    error UnexpectedProposer(address expected, address actual);
 
     constructor(IVerifiedGate gate_) {
         gate = gate_;
@@ -44,10 +50,23 @@ contract OwnerBindingRegistry {
         emit BindingProposed(msg.sender, agent);
     }
 
+    /// @notice 제안자가 아직 수락되지 않은 자신의 제안을 취소
+    function cancelProposal(address agent) external {
+        if (pendingOwnerOf[agent] != msg.sender) revert NotProposer();
+
+        delete pendingOwnerOf[agent];
+        emit BindingProposalCancelled(msg.sender, agent);
+    }
+
     /// @notice 에이전트 지갑이 자신의 키로 바인딩을 수락 (에이전트 동의 증명)
-    function acceptBinding() external {
+    /// @param expectedOwner 에이전트가 수락하려는 주인. 대기 중인 제안자와 다르면 revert.
+    /// @dev proposeBinding은 누구나 호출할 수 있어 pendingOwnerOf를 덮어쓸 수 있다.
+    ///      수락 직전에 공격자가 제안을 덮어쓰면 에이전트가 의도치 않은 주인에게
+    ///      귀속될 수 있으므로, 수락자가 주인을 명시해 프런트러닝을 차단한다.
+    function acceptBinding(address expectedOwner) external {
         address owner = pendingOwnerOf[msg.sender];
         if (owner == address(0)) revert NoPendingProposal(msg.sender);
+        if (owner != expectedOwner) revert UnexpectedProposer(expectedOwner, owner);
         // 수락 시점에도 주인의 검증 상태 재확인
         if (!gate.isVerified(owner)) revert OwnerNotVerified(owner);
 
