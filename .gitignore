@@ -6,3 +6,8 @@ broadcast/
 
 # 작업 지시서·원페이저 등 대외 비공개 문서 (공개 원격이라 커밋하지 않는다)
 dev_doc/
+
+# Node / pnpm
+node_modules/
+dist/
+*.tsbuildinfo
