@@ -14,15 +14,14 @@ import {IVerifiedGate} from "../src/interfaces/IVerifiedGate.sol";
 ///   forge script script/Deploy.s.sol --rpc-url giwa_sepolia --broadcast
 contract Deploy is Script {
     // GIWA Sepolia — Dojang (https://docs.giwa.io/giwa-ecosystem/dojang/contracts)
-    address constant EAS = 0x4200000000000000000000000000000000000021;
-    address constant INDEXER = 0x9C9Bf29880448aB39795a11b669e22A0f1d790ec;
-    bytes32 constant VERIFIED_ADDRESS_SCHEMA_UID =
-        0x072d75e18b2be4f89a13a7147240477481c4b526d5795802acba59046b426e08;
-    address constant ATTESTER_UPBIT = 0x4097bF3Cb731AEB3E501b910B33B2aF9Fa68E388;
-    address constant ATTESTER_FAUCET = 0x63CCe2b569A7bC35895ee24306c1512fefc06121;
+    address constant DOJANG_SCROLL = 0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9;
+    bytes32 constant ATTESTER_ID_FAUCET =
+        0xaa92f8c143657dde575de430aecaea6ca91f2e6072339b16932d426895d8d678; // TESTNET FAUCET
+    bytes32 constant ATTESTER_ID_UPBIT =
+        0xd99b42e778498aa3c9c1f6a012359130252780511687a35982e8e52735453034; // UPBIT KOREA
 
     /// @dev true면 MockVerifiedGate 배포 (Verified Address 발급 불가 시 플랜 B)
-    bool constant USE_MOCK_GATE = true; // TODO: Dojang 발급 확인 후 false로
+    bool constant USE_MOCK_GATE = false;
 
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
@@ -34,11 +33,10 @@ contract Deploy is Script {
             gate = mock;
             console.log("MockVerifiedGate:", address(mock));
         } else {
-            address[] memory attesters = new address[](2);
-            attesters[0] = ATTESTER_UPBIT;
-            attesters[1] = ATTESTER_FAUCET;
-            DojangVerifiedGate dojang =
-                new DojangVerifiedGate(EAS, INDEXER, VERIFIED_ADDRESS_SCHEMA_UID, attesters);
+            bytes32[] memory attesterIds = new bytes32[](2);
+            attesterIds[0] = ATTESTER_ID_FAUCET;
+            attesterIds[1] = ATTESTER_ID_UPBIT;
+            DojangVerifiedGate dojang = new DojangVerifiedGate(DOJANG_SCROLL, attesterIds);
             gate = dojang;
             console.log("DojangVerifiedGate:", address(dojang));
         }
