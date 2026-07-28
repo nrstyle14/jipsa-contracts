@@ -71,6 +71,11 @@ export const DEMO = {
   agent: "0xA8aa05641CE239F5Ceb3dFbd8EF5955D97CEBFdA",
   /** 가맹처 A — TESTNET FAUCET 도장 보유 (verifiedRecipientOnly=true에서 결제 가능) */
   merchantA: "0x49af607820B112Aa35097D0eb9B8AfE2235C181F",
+  /**
+   * 가맹처 X(공격자) — **도장 없음**을 확인한 주소 (`isVerified` = false, 2026-07-29).
+   * 인젝션 시연에서 `RecipientNotVerified` 를 유발하는 목적지다. `ATTACKER` env로 덮어쓸 수 있다.
+   */
+  attacker: "0x000000000000000000000000000000000000dEaD",
 } as const satisfies Record<string, Address>;
 
 /** tKRW 소수점 자리수 */

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "grant": "tsx scripts/grant.ts",
+    "agent": "tsx src/agent.ts",
     "verify": "tsx scripts/verify-delegation.ts",
     "trigger-block": "tsx scripts/trigger-block.ts",
     "typecheck": "tsc --noEmit",
