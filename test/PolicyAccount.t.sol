@@ -243,6 +243,49 @@ contract PolicyAccountTest is Test {
         assertEq(address(account).balance, 0);
     }
 
+    /// @notice 토큰이 일시정지되어 회수가 불가능해도 정지 자체는 반드시 성공해야 한다.
+    ///         (정지와 회수를 한 트랜잭션에 묶으면 전송 실패가 정지까지 되돌린다)
+    function test_RevokeHaltsEvenWhenTokenPaused() public {
+        token.pause();
+
+        vm.prank(owner);
+        account.revoke();
+
+        assertTrue(account.revoked(), "halt must not depend on the token transfer");
+        assertEq(account.tokenBalance(), FUNDING, "funds stay put while paused");
+
+        // 정지됐으므로 언패즈 후에도 에이전트는 쓸 수 없다
+        token.unpause();
+        vm.prank(agent);
+        vm.expectRevert(PolicyAccount.AccountRevoked.selector);
+        account.pay(merchant, 1e6);
+
+        // 남은 자금은 withdraw로 회수한다
+        vm.prank(owner);
+        account.withdraw();
+        assertEq(token.balanceOf(owner), FUNDING);
+        assertEq(account.tokenBalance(), 0);
+    }
+
+    function test_WithdrawRecoversTokenAndEth() public {
+        vm.deal(address(this), 1 ether);
+        (bool sent,) = address(account).call{value: 1 ether}("");
+        assertTrue(sent);
+
+        uint256 ethBefore = owner.balance;
+        vm.prank(owner);
+        account.withdraw();
+
+        assertEq(token.balanceOf(owner), FUNDING);
+        assertEq(owner.balance, ethBefore + 1 ether);
+    }
+
+    function test_RevertWhen_NonOwnerWithdraws() public {
+        vm.prank(attacker);
+        vm.expectRevert(PolicyAccount.NotOwner.selector);
+        account.withdraw();
+    }
+
     // ---------- 토큰 일시정지 ----------
 
     /// @notice 토큰이 pause되면 SafeERC20이 원래 revert 사유를 그대로 올린다.

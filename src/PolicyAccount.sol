@@ -45,6 +45,7 @@ contract PolicyAccount {
     event PolicySet(Policy policy);
     event PaymentExecuted(address indexed to, uint256 amount, uint256 spentTotal, uint256 spentToday);
     event Revoked(uint256 tokenAmount, uint256 ethAmount);
+    event Withdrawn(uint256 tokenAmount, uint256 ethAmount);
 
     error NotOwner();
     error NotAgent();
@@ -98,10 +99,21 @@ contract PolicyAccount {
         emit PolicySet(p);
     }
 
-    /// @notice 위임 철회: 계정 정지 + 토큰·ETH 잔액 전액 주인에게 회수
+    /// @notice 위임 철회: 계정을 즉시 정지하고 토큰·ETH 잔액을 주인에게 회수한다.
+    /// @dev 정지는 어떤 외부 사정으로도 막히면 안 된다. 회수를 같은 트랜잭션에 묶어
+    ///      실패 시 revert하면, 토큰이 일시정지된 상황에서 `revoked = true`까지
+    ///      되돌아가 주인이 에이전트를 멈추지도 못한다. 그래서 회수는 best-effort로
+    ///      수행하고, 옮기지 못한 잔액은 이후 withdraw()로 회수한다.
     function revoke() external onlyOwner {
         revoked = true;
+        (uint256 tokenSwept, uint256 ethSwept) = _trySweep();
+        emit Revoked(tokenSwept, ethSwept);
+    }
 
+    /// @notice 잔액 회수. revoke 시점에 토큰이 일시정지되어 옮기지 못한 경우 등에 쓴다.
+    ///         정지 여부와 무관하게 주인은 언제든 자금을 되찾을 수 있다.
+    /// @dev revoke와 달리 전송이 실패하면 revert한다 — 주인이 실패를 알아야 하는 경로다.
+    function withdraw() external onlyOwner {
         uint256 tokenBal = token.balanceOf(address(this));
         if (tokenBal > 0) {
             token.safeTransfer(owner, tokenBal);
@@ -113,7 +125,25 @@ contract PolicyAccount {
             if (!ok) revert CallFailed();
         }
 
-        emit Revoked(tokenBal, ethBal);
+        emit Withdrawn(tokenBal, ethBal);
+    }
+
+    /// @dev 실패해도 revert하지 않는 회수. 실제로 옮긴 금액만 돌려준다.
+    function _trySweep() private returns (uint256 tokenSwept, uint256 ethSwept) {
+        uint256 tokenBal = token.balanceOf(address(this));
+        if (tokenBal > 0) {
+            // 표준 ERC-20의 bool 반환을 전제로 한다. 실패(일시정지 등)는 삼키고
+            // withdraw()로 넘긴다.
+            try token.transfer(owner, tokenBal) returns (bool ok) {
+                if (ok) tokenSwept = tokenBal;
+            } catch {}
+        }
+
+        uint256 ethBal = address(this).balance;
+        if (ethBal > 0) {
+            (bool sent,) = owner.call{value: ethBal}("");
+            if (sent) ethSwept = ethBal;
+        }
     }
 
     // ---------- Agent ----------
