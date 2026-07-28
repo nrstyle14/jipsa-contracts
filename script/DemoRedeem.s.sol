@@ -37,11 +37,16 @@ contract DemoRedeem is Script {
     address constant PERIOD_ENFORCER = 0x73e8aEF3aD187524FD44B8f9b5B700689FE41071;
     address constant TIMESTAMP_ENFORCER = 0x972298257A69792B0219900D8A2C9DAeC8094cC6;
 
+    /// @dev 가맹처 A — TESTNET FAUCET 도장 보유 (2026-07-28 확인).
+    ///      verifiedRecipientOnly=true 정책에서 결제가 통과해야 하는 주소.
+    address constant MERCHANT_A = 0x49af607820B112Aa35097D0eb9B8AfE2235C181F;
+
     uint256 constant FUND_OWNER = 10_000e6; // 주인 EOA로 옮길 tKRW
-    uint256 constant PER_TX_CAP = 1_000e6;
-    uint256 constant TOTAL_CAP = 2_000e6; // 이 위임으로 쓸 수 있는 누적 총액
-    uint256 constant DAILY_CAP = 1_500e6; // 기간(1일)당 상한
-    uint256 constant PAY_AMOUNT = 250e6; // 에이전트가 결제할 금액
+    // MVP 시나리오 데모 정책
+    uint256 constant PER_TX_CAP = 50e6;
+    uint256 constant TOTAL_CAP = 5_000e6; // 누적 총액
+    uint256 constant DAILY_CAP = 500e6; // 기간(1일)당 상한
+    uint256 constant PAY_AMOUNT = 2e6; // 에이전트가 결제할 금액 (번역 1건)
     uint256 constant VALID_DAYS = 7;
 
     function run() external {
@@ -51,7 +56,7 @@ contract DemoRedeem is Script {
 
         address owner = vm.addr(ownerPk);
         address agent = vm.addr(agentPk);
-        address merchant = vm.addr(deployerPk); // 가맹처 역할 (데모)
+        address merchant = MERCHANT_A;
 
         console.log("owner   :", owner);
         console.log("agent   :", agent);
@@ -101,38 +106,11 @@ contract DemoRedeem is Script {
         console.log("paid:", PAY_AMOUNT);
     }
 
-    /// @notice 누적 상한이 없던 초기 데모 위임(caveat 2개)을 무효화한다.
-    ///   forge script script/DemoRedeem.s.sol --sig "disableLegacy()" --rpc-url giwa_sepolia --broadcast
-    function disableLegacy() external {
-        uint256 ownerPk = vm.envUint("OWNER_PRIVATE_KEY");
-        uint256 agentPk = vm.envUint("AGENT_PRIVATE_KEY");
-        address owner = vm.addr(ownerPk);
-        address agent = vm.addr(agentPk);
-
-        Caveat[] memory c_ = new Caveat[](2);
-        c_[0] = Caveat({
-            enforcer: PER_TX_ENFORCER,
-            terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
-            args: hex""
-        });
-        c_[1] = Caveat({
-            enforcer: DOJANG_ENFORCER,
-            terms: abi.encode(GATE, address(REGISTRY), address(TOKEN), false),
-            args: hex""
-        });
-        Delegation memory legacy_ = Delegation({
-            delegate: agent,
-            delegator: owner,
-            authority: DELEGATION_MANAGER.ROOT_AUTHORITY(),
-            caveats: c_,
-            salt: 0,
-            signature: hex""
-        });
-        console.log("disabling:", vm.toString(EncoderLib._getDelegationHash(legacy_)));
-
-        vm.broadcast(ownerPk);
-        DELEGATION_MANAGER.disableDelegation(legacy_);
-    }
+    // 참고: 누적 상한이 없던 초기 데모 위임
+    // 0x46282044fe5d257fb1ed53808bd84f0730ca21550e8633d709352a4b8c21e413 은
+    // 2026-07-28 disableDelegation 으로 무효화 완료
+    // (tx 0xe61a243915e6da3ef86a2febb49afd3b90f11654e9c77a8cff1eb79e8da7195b).
+    // 재구성 함수는 정책 상수가 바뀌면 해시가 어긋나 오해를 부르므로 제거했다.
 
     /// @notice 건당 상한을 넘는 리딤이 실체인에서 실제로 막히는지 확인한다.
     ///         브로드캐스트하지 않고 시뮬레이션만 한다 (revert를 기대).
@@ -210,7 +188,7 @@ contract DemoRedeem is Script {
         });
         c_[6] = Caveat({
             enforcer: DOJANG_ENFORCER,
-            terms: abi.encode(GATE, address(REGISTRY), address(TOKEN), false),
+            terms: abi.encode(GATE, address(REGISTRY), address(TOKEN), true),
             args: hex""
         });
 
@@ -219,7 +197,7 @@ contract DemoRedeem is Script {
             delegator: owner,
             authority: DELEGATION_MANAGER.ROOT_AUTHORITY(),
             caveats: c_,
-            salt: 1,
+            salt: 2,
             signature: hex""
         });
 
