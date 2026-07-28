@@ -106,15 +106,28 @@ forge test -vvv
 # 공개 RPC의 rate limit(HTTP 429)에 걸리지 않는다. 고정 없이 반복 실행하면 429로 실패할 수 있다.
 forge test --fork-url https://sepolia-rpc.giwa.io --fork-block-number 31869189
 
-# 배포 (환경변수: PRIVATE_KEY)
-forge script script/Deploy.s.sol --rpc-url https://sepolia-rpc.giwa.io --broadcast
+# 배포 + verify (한 번에)
+# PRIVATE_KEY는 .env에 두면 foundry가 자동으로 읽는다 (.env는 gitignore 처리됨).
+# --verify를 붙이면 생성자 인자를 broadcast 기록에서 가져와 자동 처리한다.
+# 익스플로러는 Blockscout v11.1.3이며 API 키가 필요 없다.
+forge script script/Deploy.s.sol \
+  --rpc-url https://sepolia-rpc.giwa.io \
+  --broadcast \
+  --verify --verifier blockscout \
+  --verifier-url https://sepolia-explorer.giwa.io/api/
 
-# verify (익스플로러 Blockscout 계열)
+# 개별 verify가 필요한 경우 (예: 데모 중 생성한 PolicyAccount)
 forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
-  --verifier blockscout --verifier-url https://sepolia-explorer.giwa.io/api
+  --chain-id 91342 \
+  --verifier blockscout --verifier-url https://sepolia-explorer.giwa.io/api/ \
+  --constructor-args $(cast abi-encode \
+    'c(address,address,address,address,address,(uint256,uint256,uint256,uint64,bool))' \
+    <OWNER> <AGENT> <REGISTRY> <GATE> <TOKEN> '(100000000000,1000000000,10000000000,<VALID_UNTIL>,false)')
 ```
+
+배포 비용은 세 컨트랙트 합쳐 약 3,331,845 gas (≈ 0.0000034 ETH)다.
+가스가 없으면 https://docs.giwa.io/get-started/faucets 에서 받는다.
 
 ## ⚠️ 배포 전 확인 사항 (TODO)
 
-1. **verify 명령의 verifier-url**: 익스플로러 API 경로 실제 확인 필요.
-2. **배포 주소 표 채우기**: 배포 후 위 표를 실제 주소로 갱신.
+1. **배포 주소 표 채우기**: 배포 후 위 표를 실제 주소로 갱신.

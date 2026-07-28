@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
 /// @notice Dojang Scroll — GIWA Sepolia: 0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9
 /// @dev EAS/Indexer를 직접 조회할 필요 없이 attesterId 단위로 검증 여부를 알려준다.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
 /// @notice 신원 검증 게이트 추상화.
 ///         실전은 DojangVerifiedGate, 데모/테스트는 MockVerifiedGate로 교체 가능.
