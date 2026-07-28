@@ -100,8 +100,13 @@ contract FullCaveatSetTest is Test {
 
     // ---------- caveat 구성 ----------
 
-    /// @dev 지시서 B-4 순서: AllowedTargets → AllowedMethods → 총예산 → 일간 →
-    ///      만료 → 건당 → Dojang
+    /// @dev caveat 실행 순서 = 배열 순서. 좁고 저렴한 검사를 앞에 둔다.
+    ///      ① 타겟 ② 메서드 ③ 만료 ④ **건당** ⑤ 총예산 ⑥ 기간 ⑦ Dojang
+    ///
+    ///      건당 상한을 금액 검사 중 가장 앞에 두는 이유: 가장 좁은 조건이라
+    ///      과다 청구가 여기서 걸려야 revert 사유가 사람에게 가장 잘 읽힌다.
+    ///      (뒤에 두면 5,000 시도가 기간 상한에서 먼저 걸려 사유가 뒤바뀐다)
+    ///      Dojang은 외부 컨트랙트(gate·registry) 조회라 가장 비싸므로 맨 뒤.
     function _caveats() internal view returns (Caveat[] memory c_) {
         c_ = new Caveat[](7);
         c_[0] = Caveat({
@@ -115,25 +120,25 @@ contract FullCaveatSetTest is Test {
             args: hex""
         });
         c_[2] = Caveat({
-            enforcer: address(totalBudget),
-            terms: abi.encodePacked(address(token), TOTAL_BUDGET),
-            args: hex""
-        });
-        c_[3] = Caveat({
-            enforcer: address(dailyCap),
-            // token || periodAmount || periodDuration || startDate
-            terms: abi.encodePacked(address(token), DAILY_CAP, uint256(1 days), uint256(block.timestamp)),
-            args: hex""
-        });
-        c_[4] = Caveat({
             enforcer: address(timestamps),
             // uint128 after || uint128 before
             terms: abi.encodePacked(uint128(0), uint128(expiry)),
             args: hex""
         });
-        c_[5] = Caveat({
+        c_[3] = Caveat({
             enforcer: address(perTxCap),
             terms: abi.encodePacked(address(token), PER_TX_CAP),
+            args: hex""
+        });
+        c_[4] = Caveat({
+            enforcer: address(totalBudget),
+            terms: abi.encodePacked(address(token), TOTAL_BUDGET),
+            args: hex""
+        });
+        c_[5] = Caveat({
+            enforcer: address(dailyCap),
+            // token || periodAmount || periodDuration || startDate
+            terms: abi.encodePacked(address(token), DAILY_CAP, uint256(1 days), uint256(block.timestamp)),
             args: hex""
         });
         c_[6] = Caveat({
@@ -260,7 +265,7 @@ contract FullCaveatSetTest is Test {
     function test_RevertWhen_TotalBudgetExceeded() public {
         // 총예산을 일간 한도보다 낮게 잡아 총예산 검사에 먼저 걸리게 한다
         Caveat[] memory c_ = _caveats();
-        c_[2].terms = abi.encodePacked(address(token), uint256(1_500e6));
+        c_[4].terms = abi.encodePacked(address(token), uint256(1_500e6));
         Delegation memory d_ = _signWith(c_, 1);
 
         _redeem(d_, _transfer(merchant, PER_TX_CAP));
