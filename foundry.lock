@@ -1,4 +1,10 @@
 {
+  "lib/delegation-framework": {
+    "tag": {
+      "name": "v1.3.0",
+      "rev": "bfbdf9795a976833ed2fa000baf42fbb83958b03"
+    }
+  },
   "lib/forge-std": {
     "tag": {
       "name": "v1.16.2",
@@ -7,8 +13,8 @@
   },
   "lib/openzeppelin-contracts": {
     "tag": {
-      "name": "v5.6.1",
-      "rev": "5fd1781b1454fd1ef8e722282f86f9293cacf256"
+      "name": "v5.0.2",
+      "rev": "dbb6104ce834628e473d2173bbc9d47f81a9eec3"
     }
   }
 }
