@@ -68,6 +68,14 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 
 전부 Blockscout에서 verify 완료. 배포 gas 합계 10,915,043.
 
+> **verify 기준 커밋**: 익스플로러에 등록된 소스는 `a14a988` 시점의 `src/`다.
+> 이후 `b693e90`에서 `JipsaPerTxCapEnforcer.sol`에 "단독 사용 금지" 경고 **주석만**
+> 추가했다. 로직 변경은 0줄이며, 배포된 바이트코드를 현재 소스와 비교해
+> immutable 슬롯(생성자 인자)과 메타데이터 해시를 제외한 **실행 코드가 동일함을
+> 확인했다**. 주석이 메타데이터 해시를 바꾸므로 같은 주소에 재verify는 불가능하다 —
+> 저장소 HEAD와 익스플로러 소스를 나란히 비교하면 이 주석 블록만 차이가 난다.
+> 재배포는 하지 않았다 (주소가 바뀌고 로직은 동일하므로).
+
 | 컨트랙트 | 주소 |
 |---|---|
 | JipsaSettlementToken (tKRW) | `0x1E743C166FaeeEe5b840A471a6760535AE4076B0` |
@@ -159,6 +167,18 @@ MetaMask delegation-framework **감사 태그 v1.3.0**을 그대로 배포하고
 | `JipsaPerTxCapEnforcer` | **JIPSA** — 건당 상한 (스톡에 없음) |
 
 스톡 enforcer는 "얼마나"를 제한하고, `DojangCaveatEnforcer`는 "누가 책임지는가"를 강제한다.
+
+> **caveat 순서 (확정)**: ① AllowedTargets ② AllowedMethods ③ Timestamp
+> ④ **JipsaPerTxCap** ⑤ ERC20TransferAmount ⑥ ERC20PeriodTransfer ⑦ Dojang.
+> caveat은 배열 순서대로 실행되므로 **차단 사유가 순서에 의존한다** — 건당 상한을
+> 금액 검사 앞에 두어야 과다 청구가 `PerTxCapExceeded`로 걸린다. Dojang은 외부
+> 컨트랙트 조회라 맨 뒤. 회귀 테스트: `test/erc7710/DemoScenario.t.sol`
+
+> **batch 전용 enforcer는 넣지 말 것**: 우리 caveat은 `Timestamp`만 빼고 전부
+> `onlySingleCallTypeMode`라, `ExactExecutionBatchEnforcer` 같은 batch 전용을
+> 한 위임에 섞으면 어떤 모드로도 리딤할 수 없다. 배치 실행 자체는 `DeleGatorCore`가
+> 이미 지원하므로 코드 추가가 필요 없고, 배치로 가면 Dojang·누적/기간 상한을 포기해야
+> 한다. approve+후속 호출이 필요해지면 위임을 두 장으로 분리한다.
 
 > ⚠️ **caveat 구성 필수 조건**: `JipsaPerTxCapEnforcer`는 실행 1건당 금액만 보는
 > 무상태 enforcer다. 위임은 `disableDelegation` 전까지 무제한 재사용 가능하고 리딤
