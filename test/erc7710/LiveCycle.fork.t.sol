@@ -10,6 +10,7 @@ import {DelegationManager} from "delegation-framework/src/DelegationManager.sol"
 import {IDelegationManager} from "delegation-framework/src/interfaces/IDelegationManager.sol";
 import {EncoderLib} from "delegation-framework/src/libraries/EncoderLib.sol";
 import {Delegation, Caveat, ModeCode} from "delegation-framework/src/utils/Types.sol";
+import {ERC20TransferAmountEnforcer} from "delegation-framework/src/enforcers/ERC20TransferAmountEnforcer.sol";
 
 import {JipsaSettlementToken} from "../../src/JipsaSettlementToken.sol";
 import {DojangVerifiedGate} from "../../src/gates/DojangVerifiedGate.sol";
@@ -39,6 +40,9 @@ contract LiveCycleForkTest is Test {
     address constant DELEGATOR_IMPL = 0x50bC6Ac159bd85838Af8A42Fd482B8f633FeA38D;
     DojangCaveatEnforcer constant DOJANG = DojangCaveatEnforcer(0x8C9c8437C27003f3d86F438c7147668d9cC5948C);
     JipsaPerTxCapEnforcer constant PER_TX = JipsaPerTxCapEnforcer(0xdea5DF3357e0EEf6A841d3639d115eb57b42B642);
+    /// @dev 누적 상한 — 건당 상한만으로는 반복 리딤을 막지 못한다 (CumulativeDrain.t.sol 참조)
+    ERC20TransferAmountEnforcer constant TOTAL_BUDGET_ENFORCER =
+        ERC20TransferAmountEnforcer(0x4cC2931c6dB25aAaA6360b802b7987f2A39eF559);
 
     /// @dev 도장을 보유하고 7702 코드가 심긴 데모 주인 EOA
     address constant OWNER = 0x7d558dEAf66985aE1358D96152EF1b7A28857a6C;
@@ -66,13 +70,18 @@ contract LiveCycleForkTest is Test {
     }
 
     function _caveats() internal pure returns (Caveat[] memory c_) {
-        c_ = new Caveat[](2);
+        c_ = new Caveat[](3);
         c_[0] = Caveat({
+            enforcer: address(TOTAL_BUDGET_ENFORCER),
+            terms: abi.encodePacked(address(TOKEN), TOTAL_BUDGET),
+            args: hex""
+        });
+        c_[1] = Caveat({
             enforcer: address(PER_TX),
             terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
             args: hex""
         });
-        c_[1] = Caveat({
+        c_[2] = Caveat({
             enforcer: address(DOJANG),
             terms: abi.encode(address(GATE), address(REGISTRY), address(TOKEN), false),
             args: hex""

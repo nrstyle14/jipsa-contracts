@@ -8,6 +8,14 @@ import {ModeCode} from "delegation-framework/src/utils/Types.sol";
 /// @title JipsaPerTxCapEnforcer
 /// @notice 리딤 1건당 전송 금액 상한을 강제한다.
 ///
+/// @dev ⚠️ **이 enforcer 단독으로는 누적 손실을 제한하지 못한다.** 실행 1건당 금액만
+///      보고 상태를 두지 않으며, 위임은 `disableDelegation` 전까지 무제한 재사용
+///      가능하고 리딤 횟수 제한도 없다. 따라서 caveat이 이것뿐이면 에이전트 키를 쥔
+///      공격자가 상한 이하 리딤을 반복해 잔액 전체를 뺄 수 있다(배치면 한 tx로도).
+///      **반드시 누적 상한 `ERC20TransferAmountEnforcer`와 함께 구성할 것.**
+///      기간 상한(`ERC20PeriodTransferEnforcer`)·만료(`TimestampEnforcer`)도 권장한다.
+///      회귀 테스트: test/erc7710/CumulativeDrain.t.sol
+///
 /// @dev v1.3.0 스톡 enforcer에는 "건당" 상한이 없다. `ERC20TransferAmountEnforcer`는
 ///      누적 총액, `ERC20PeriodTransferEnforcer`는 기간 합계, `ValueLteEnforcer`는
 ///      네이티브 value 기준이라 어느 것도 1회 전송액을 제한하지 않는다. 그래서 추가한다.

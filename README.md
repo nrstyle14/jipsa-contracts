@@ -75,11 +75,11 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 | OwnerBindingRegistry | `0x6ef7F805fBCaA49cbfc11C861E2EC051549433C7` |
 | DelegationManager | `0x46C7b0aaC0Cde81744823a305FBb86D31D4F7F89` |
 | EIP7702StatelessDeleGator | `0x50bC6Ac159bd85838Af8A42Fd482B8f633FeA38D` |
-| AllowedTargetsEnforcer | `0x977156e9b7Ae812c542FdBE3EEa0b93fE87c0371` |
-| AllowedMethodsEnforcer | `0x816e3D68470E84dB37799eCA14dC9EbD86b37591` |
-| ERC20TransferAmountEnforcer | `0x4cc2931c6DB25aAAa6360b802B7987f2a39Ef559` |
-| ERC20PeriodTransferEnforcer | `0x73E8aef3aD187524fD44b8f9b5b700689fE41071` |
-| TimestampEnforcer | `0x972298257a69792b0219900d8a2C9dAeC8094cC6` |
+| AllowedTargetsEnforcer | `0x977156e9b7Ae812C542FDbE3eEa0b93Fe87C0371` |
+| AllowedMethodsEnforcer | `0x816E3D68470E84Db37799ECA14dc9EBD86b37591` |
+| ERC20TransferAmountEnforcer | `0x4cC2931c6dB25aAaA6360b802b7987f2A39eF559` |
+| ERC20PeriodTransferEnforcer | `0x73e8aEF3aD187524FD44B8f9b5B700689FE41071` |
+| TimestampEnforcer | `0x972298257A69792B0219900D8A2C9DAeC8094cC6` |
 | **DojangCaveatEnforcer** | `0x8C9c8437C27003f3d86F438c7147668d9cC5948C` |
 | **JipsaPerTxCapEnforcer** | `0xdea5DF3357e0EEf6A841d3639d115eb57b42B642` |
 
@@ -159,6 +159,14 @@ MetaMask delegation-framework **감사 태그 v1.3.0**을 그대로 배포하고
 | `JipsaPerTxCapEnforcer` | **JIPSA** — 건당 상한 (스톡에 없음) |
 
 스톡 enforcer는 "얼마나"를 제한하고, `DojangCaveatEnforcer`는 "누가 책임지는가"를 강제한다.
+
+> ⚠️ **caveat 구성 필수 조건**: `JipsaPerTxCapEnforcer`는 실행 1건당 금액만 보는
+> 무상태 enforcer다. 위임은 `disableDelegation` 전까지 무제한 재사용 가능하고 리딤
+> 횟수 제한도 없으므로, **건당 상한만 넣으면 상한 이하 리딤을 반복해 잔액 전체가 빠진다**
+> (배치 리딤이면 한 트랜잭션으로도 가능). 7702 모델은 예치가 없어 주인 EOA 잔액 전체가
+> 위임 표면이므로 이는 치명적이다. **누적 상한 `ERC20TransferAmountEnforcer`를 항상
+> 함께 넣어야 하며**, 기간 상한과 만료도 권장한다.
+> 회귀 테스트: `test/erc7710/CumulativeDrain.t.sol`
 
 ### 배포
 

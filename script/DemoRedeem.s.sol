@@ -31,10 +31,18 @@ contract DemoRedeem is Script {
     address constant DOJANG_ENFORCER = 0x8C9c8437C27003f3d86F438c7147668d9cC5948C;
     address constant PER_TX_ENFORCER = 0xdea5DF3357e0EEf6A841d3639d115eb57b42B642;
     address constant GATE = 0xD13aE574E53F2D14F71411383CcEeC9c16529fc3;
+    address constant ALLOWED_TARGETS = 0x977156e9b7Ae812C542FDbE3eEa0b93Fe87C0371;
+    address constant ALLOWED_METHODS = 0x816E3D68470E84Db37799ECA14dc9EBD86b37591;
+    address constant TOTAL_BUDGET_ENFORCER = 0x4cC2931c6dB25aAaA6360b802b7987f2A39eF559;
+    address constant PERIOD_ENFORCER = 0x73e8aEF3aD187524FD44B8f9b5B700689FE41071;
+    address constant TIMESTAMP_ENFORCER = 0x972298257A69792B0219900D8A2C9DAeC8094cC6;
 
     uint256 constant FUND_OWNER = 10_000e6; // 주인 EOA로 옮길 tKRW
     uint256 constant PER_TX_CAP = 1_000e6;
+    uint256 constant TOTAL_CAP = 2_000e6; // 이 위임으로 쓸 수 있는 누적 총액
+    uint256 constant DAILY_CAP = 1_500e6; // 기간(1일)당 상한
     uint256 constant PAY_AMOUNT = 250e6; // 에이전트가 결제할 금액
+    uint256 constant VALID_DAYS = 7;
 
     function run() external {
         uint256 deployerPk = vm.envUint("PRIVATE_KEY");
@@ -92,6 +100,39 @@ contract DemoRedeem is Script {
         console.log("paid:", PAY_AMOUNT);
     }
 
+    /// @notice 누적 상한이 없던 초기 데모 위임(caveat 2개)을 무효화한다.
+    ///   forge script script/DemoRedeem.s.sol --sig "disableLegacy()" --rpc-url giwa_sepolia --broadcast
+    function disableLegacy() external {
+        uint256 ownerPk = vm.envUint("OWNER_PRIVATE_KEY");
+        uint256 agentPk = vm.envUint("AGENT_PRIVATE_KEY");
+        address owner = vm.addr(ownerPk);
+        address agent = vm.addr(agentPk);
+
+        Caveat[] memory c_ = new Caveat[](2);
+        c_[0] = Caveat({
+            enforcer: PER_TX_ENFORCER,
+            terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
+            args: hex""
+        });
+        c_[1] = Caveat({
+            enforcer: DOJANG_ENFORCER,
+            terms: abi.encode(GATE, address(REGISTRY), address(TOKEN), false),
+            args: hex""
+        });
+        Delegation memory legacy_ = Delegation({
+            delegate: agent,
+            delegator: owner,
+            authority: DELEGATION_MANAGER.ROOT_AUTHORITY(),
+            caveats: c_,
+            salt: 0,
+            signature: hex""
+        });
+        console.log("disabling:", vm.toString(EncoderLib._getDelegationHash(legacy_)));
+
+        vm.broadcast(ownerPk);
+        DELEGATION_MANAGER.disableDelegation(legacy_);
+    }
+
     /// @notice 건당 상한을 넘는 리딤이 실체인에서 실제로 막히는지 확인한다.
     ///         브로드캐스트하지 않고 시뮬레이션만 한다 (revert를 기대).
     ///   forge script script/DemoRedeem.s.sol --sig "overCap()" --rpc-url giwa_sepolia
@@ -126,13 +167,42 @@ contract DemoRedeem is Script {
         view
         returns (Delegation memory d_)
     {
-        Caveat[] memory c_ = new Caveat[](2);
+        // ⚠️ 건당 상한만으로는 누적 손실이 제한되지 않는다. JipsaPerTxCapEnforcer는
+        //    실행 1건당 금액만 보므로, 상한 이하 리딤을 반복하면 잔액 전체가 빠진다.
+        //    누적 상한(ERC20TransferAmount)·기간 상한(ERC20PeriodTransfer)·
+        //    만료(Timestamp)를 반드시 함께 넣어야 피해 상한이 성립한다.
+        Caveat[] memory c_ = new Caveat[](7);
         c_[0] = Caveat({
+            enforcer: ALLOWED_TARGETS,
+            terms: abi.encodePacked(address(TOKEN)),
+            args: hex""
+        });
+        c_[1] = Caveat({
+            enforcer: ALLOWED_METHODS,
+            terms: abi.encodePacked(TOKEN.transfer.selector),
+            args: hex""
+        });
+        c_[2] = Caveat({
+            enforcer: TOTAL_BUDGET_ENFORCER,
+            terms: abi.encodePacked(address(TOKEN), TOTAL_CAP),
+            args: hex""
+        });
+        c_[3] = Caveat({
+            enforcer: PERIOD_ENFORCER,
+            terms: abi.encodePacked(address(TOKEN), DAILY_CAP, uint256(1 days), block.timestamp),
+            args: hex""
+        });
+        c_[4] = Caveat({
+            enforcer: TIMESTAMP_ENFORCER,
+            terms: abi.encodePacked(uint128(0), uint128(block.timestamp + VALID_DAYS * 1 days)),
+            args: hex""
+        });
+        c_[5] = Caveat({
             enforcer: PER_TX_ENFORCER,
             terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
             args: hex""
         });
-        c_[1] = Caveat({
+        c_[6] = Caveat({
             enforcer: DOJANG_ENFORCER,
             terms: abi.encode(GATE, address(REGISTRY), address(TOKEN), false),
             args: hex""
@@ -143,7 +213,7 @@ contract DemoRedeem is Script {
             delegator: owner,
             authority: DELEGATION_MANAGER.ROOT_AUTHORITY(),
             caveats: c_,
-            salt: 0,
+            salt: 1,
             signature: hex""
         });
 
