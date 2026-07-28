@@ -70,15 +70,16 @@ contract LiveCycleForkTest is Test {
     }
 
     function _caveats() internal pure returns (Caveat[] memory c_) {
+        // 확정 순서와 동일한 상대 배치: 건당 → 총예산 → Dojang
         c_ = new Caveat[](3);
         c_[0] = Caveat({
-            enforcer: address(TOTAL_BUDGET_ENFORCER),
-            terms: abi.encodePacked(address(TOKEN), TOTAL_BUDGET),
+            enforcer: address(PER_TX),
+            terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
             args: hex""
         });
         c_[1] = Caveat({
-            enforcer: address(PER_TX),
-            terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
+            enforcer: address(TOTAL_BUDGET_ENFORCER),
+            terms: abi.encodePacked(address(TOKEN), TOTAL_BUDGET),
             args: hex""
         });
         c_[2] = Caveat({

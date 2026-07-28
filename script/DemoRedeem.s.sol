@@ -172,6 +172,9 @@ contract DemoRedeem is Script {
         //    실행 1건당 금액만 보므로, 상한 이하 리딤을 반복하면 잔액 전체가 빠진다.
         //    누적 상한(ERC20TransferAmount)·기간 상한(ERC20PeriodTransfer)·
         //    만료(Timestamp)를 반드시 함께 넣어야 피해 상한이 성립한다.
+        // 순서 확정: 타겟 → 메서드 → 만료 → 건당 → 총예산 → 기간 → Dojang
+        // 건당 상한을 금액 검사 앞에 두어야 과다 청구가 PerTxCapExceeded로 걸린다.
+        // 근거·회귀 테스트: test/erc7710/DemoScenario.t.sol
         Caveat[] memory c_ = new Caveat[](7);
         c_[0] = Caveat({
             enforcer: ALLOWED_TARGETS,
@@ -184,25 +187,25 @@ contract DemoRedeem is Script {
             args: hex""
         });
         c_[2] = Caveat({
-            enforcer: TOTAL_BUDGET_ENFORCER,
-            terms: abi.encodePacked(address(TOKEN), TOTAL_CAP),
-            args: hex""
-        });
-        c_[3] = Caveat({
-            enforcer: PERIOD_ENFORCER,
-            terms: abi.encodePacked(address(TOKEN), DAILY_CAP, uint256(1 days), block.timestamp),
-            args: hex""
-        });
-        c_[4] = Caveat({
             enforcer: TIMESTAMP_ENFORCER,
             // uint128로의 축소는 안전하다 (unix 초는 2^128을 넘지 않는다)
             // forge-lint: disable-next-line(unsafe-typecast)
             terms: abi.encodePacked(uint128(0), uint128(block.timestamp + VALID_DAYS * 1 days)),
             args: hex""
         });
-        c_[5] = Caveat({
+        c_[3] = Caveat({
             enforcer: PER_TX_ENFORCER,
             terms: abi.encodePacked(address(TOKEN), PER_TX_CAP),
+            args: hex""
+        });
+        c_[4] = Caveat({
+            enforcer: TOTAL_BUDGET_ENFORCER,
+            terms: abi.encodePacked(address(TOKEN), TOTAL_CAP),
+            args: hex""
+        });
+        c_[5] = Caveat({
+            enforcer: PERIOD_ENFORCER,
+            terms: abi.encodePacked(address(TOKEN), DAILY_CAP, uint256(1 days), block.timestamp),
             args: hex""
         });
         c_[6] = Caveat({
