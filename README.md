@@ -128,6 +128,60 @@ forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
 배포 비용은 세 컨트랙트 합쳐 약 3,331,845 gas (≈ 0.0000034 ETH)다.
 가스가 없으면 https://docs.giwa.io/get-started/faucets 에서 받는다.
 
+## ERC-7710 위임 스택 (feat/erc7710-delegation)
+
+MetaMask delegation-framework **감사 태그 v1.3.0**을 그대로 배포하고, JIPSA는
+책임 귀속을 강제하는 caveat enforcer 2종만 공급한다. 커스텀 계정 코드는 0줄이다.
+
+| 컨트랙트 | 출처 |
+|---|---|
+| `DelegationManager`, `EIP7702StatelessDeleGator` | 프레임워크 원본 (v1.3.0) |
+| `AllowedTargets`, `AllowedMethods`, `ERC20TransferAmount`, `ERC20PeriodTransfer`, `Timestamp` | 스톡 enforcer |
+| `DojangCaveatEnforcer` | **JIPSA** — 수신처 도장 · 바인딩 일치 · 주인 도장 |
+| `JipsaPerTxCapEnforcer` | **JIPSA** — 건당 상한 (스톡에 없음) |
+
+스톡 enforcer는 "얼마나"를 제한하고, `DojangCaveatEnforcer`는 "누가 책임지는가"를 강제한다.
+
+### 배포
+
+```bash
+forge script script/DeployErc7710.s.sol --rpc-url giwa_sepolia --broadcast
+```
+
+이미 배포된 것을 재사용하려면 `TOKEN_ADDRESS` / `GATE_ADDRESS` / `REGISTRY_ADDRESS`를 넘긴다.
+EntryPoint는 v0.7(`0x0000000071727De22E5E9d8BAf0edAc6f37da032`)을 쓴다 —
+프레임워크 v1.3.0이 account-abstraction v0.7.0을 전제하며, GIWA Sepolia에 배포되어 있다.
+
+### 주인 EOA에 EIP-7702 코드 심기 (1회)
+
+```bash
+cast send <주인EOA> --auth <EIP7702StatelessDeleGator주소> --private-key $OWNER_PRIVATE_KEY --rpc-url https://sepolia-rpc.giwa.io
+```
+
+확인 — `0xef0100` + 구현체 주소가 나와야 한다.
+
+```bash
+cast code <주인EOA> --rpc-url https://sepolia-rpc.giwa.io
+```
+
+> **주의**: `forge script`에서 `vm.signAndAttachDelegation`으로는 되지 않는다. forge 1.7.1
+> 기준 브로드캐스트 시 type-4 트랜잭션이 만들어지지 않으며, 스크립트가
+> "ONCHAIN EXECUTION COMPLETE & SUCCESSFUL"을 출력해도 코드가 심기지 않는다.
+> 포크에서 실측 확인했다. 위 `cast send --auth`는 `type 4`로 정상 적용된다.
+
+> **지갑 제약**: type-4 authorization 서명은 개인키 접근이 필요해 MetaMask 인젝티드
+> 프로바이더로는 임의 체인에서 불가하다. 그래서 이 단계만 주인 데모 키로 CLI에서
+> 처리한다. **코드가 심어진 뒤의 모든 주인 동작(위임 EIP-712 서명, `disableDelegation`,
+> 일반 tx)은 MetaMask로 정상 수행된다.**
+
+### 격리 모델의 차이 (중요)
+
+`PolicyAccount`는 **예치한 예산**이 피해 상한이었다. 7702 모델은 예치가 없고 주인 EOA
+잔액 전체가 위임 대상이 되므로, **피해 상한 = enforcer가 강제하는 캡**이다. 총예산
+enforcer가 곧 금고 칸막이다. 데모는 한도를 타이트하게 설정한 전용 데모 EOA로 진행한다.
+
+`PolicyAccount`는 플랜 B로 `main`에 유지된다.
+
 ## ⚠️ 배포 전 확인 사항 (TODO)
 
 1. **배포 주소 표 채우기**: 배포 후 위 표를 실제 주소로 갱신.
