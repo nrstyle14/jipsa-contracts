@@ -152,6 +152,22 @@ forge script script/DeployErc7710.s.sol --rpc-url giwa_sepolia --broadcast
 EntryPoint는 v0.7(`0x0000000071727De22E5E9d8BAf0edAc6f37da032`)을 쓴다 —
 프레임워크 v1.3.0이 account-abstraction v0.7.0을 전제하며, GIWA Sepolia에 배포되어 있다.
 
+### 전제: 도장 보유 데모 주인 EOA
+
+7702 모델의 주인은 **전용 데모 EOA**를 쓴다. 개인 KYC 주소를 delegator로 쓰면 그 주소의
+전 잔액이 위임 표면이 되고, type-4 셋업 때문에 결국 그 키를 CLI에 넣어야 한다.
+
+1. 새 EOA 생성 (`cast wallet new ~/.foundry/keystores demoOwner` 또는 `cast wallet new`)
+2. 플레이그라운드에서 **TESTNET FAUCET** attester로 그 주소에 Verified Address 발급
+3. 확인 — `true`가 나와야 한다
+
+```bash
+cast call 0xd5077b67dcb56caC8b270C7788FC3E6ee03F17B9 "isVerified(address,bytes32)(bool)" <데모주인주소> 0xaa92f8c143657dde575de430aecaea6ca91f2e6072339b16932d426895d8d678 --rpc-url https://sepolia-rpc.giwa.io
+```
+
+이 도장이 있어야 `OwnerBindingRegistry.proposeBinding`과 `DojangCaveatEnforcer`의
+주인 검사를 통과한다. 도장 발급 전에는 포크 테스트도 정상 리딤까지 갈 수 없다.
+
 ### 주인 EOA에 EIP-7702 코드 심기 (1회)
 
 ```bash
