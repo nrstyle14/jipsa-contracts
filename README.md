@@ -12,18 +12,27 @@ src/
 ├── gates/
 │   ├── DojangVerifiedGate.sol    # Dojang Verified Address 기반 검증 (실전용)
 │   └── MockVerifiedGate.sol      # 테스트 전용 mock (배포 스크립트에서는 사용 안 함)
+├── enforcers/
+│   ├── DojangCaveatEnforcer.sol  # ERC-7710 — 책임 귀속 강제 (JIPSA 고유)
+│   └── JipsaPerTxCapEnforcer.sol # ERC-7710 — 건당 상한
 ├── JipsaSettlementToken.sol      # tKRW — 데모용 정산 토큰 (스테이블코인 아님)
 ├── OwnerBindingRegistry.sol      # 에이전트 지갑 ↔ 검증된 주인 바인딩
-└── PolicyAccount.sol             # 지출 정책이 강제되는 에이전트 컨트랙트 지갑
+└── PolicyAccount.sol             # 지출 정책이 강제되는 에이전트 컨트랙트 지갑 (플랜 B)
 script/
-└── Deploy.s.sol
+├── Deploy.s.sol                  # 플랜 B 스택
+└── DeployErc7710.s.sol           # ERC-7710 스택 (프레임워크 + enforcer)
 test/
 ├── JipsaSettlementToken.t.sol    # 토큰 (역할, faucet 쿨다운, pause, permit)
 ├── OwnerBindingRegistry.t.sol    # 바인딩 (프런트러닝 차단, 제안 취소)
 ├── PolicyAccount.t.sol           # 지출 정책 단위 테스트
 ├── ForkTestBase.sol              # 포크 테스트 공통 상수·가드
 ├── DojangVerifiedGate.fork.t.sol # 실제 DojangScroll 조회 검증
-└── PolicyAccount.fork.t.sol      # 실제 도장으로 바인딩→지출 통합 검증
+├── PolicyAccount.fork.t.sol      # 실제 도장으로 바인딩→지출 통합 검증
+└── erc7710/
+    ├── DelegationRedeem.t.sol    # 7702 리딤 사이클 (서명·철회·Dojang)
+    ├── FullCaveatSet.t.sol       # caveat 7종 조합 + 위반 6종
+    ├── DojangEnforcer.fork.t.sol # enforcer × 실제 DojangScroll
+    └── LiveCycle.fork.t.sol      # 실배포 주소 + 실도장 주인 축약 사이클
 ```
 
 ## GIWA 세폴리아 네트워크 정보
@@ -57,13 +66,22 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 
 ## 배포 주소 (GIWA Sepolia)
 
-배포 후 채운다.
+전부 Blockscout에서 verify 완료. 배포 gas 합계 10,915,043.
 
 | 컨트랙트 | 주소 |
 |---|---|
-| JipsaSettlementToken (tKRW) | _(미배포)_ |
-| DojangVerifiedGate | _(미배포)_ |
-| OwnerBindingRegistry | _(미배포)_ |
+| JipsaSettlementToken (tKRW) | `0x1E743C166FaeeEe5b840A471a6760535AE4076B0` |
+| DojangVerifiedGate | `0xD13aE574E53F2D14F71411383CcEeC9c16529fc3` |
+| OwnerBindingRegistry | `0x6ef7F805fBCaA49cbfc11C861E2EC051549433C7` |
+| DelegationManager | `0x46C7b0aaC0Cde81744823a305FBb86D31D4F7F89` |
+| EIP7702StatelessDeleGator | `0x50bC6Ac159bd85838Af8A42Fd482B8f633FeA38D` |
+| AllowedTargetsEnforcer | `0x977156e9b7Ae812c542FdBE3EEa0b93fE87c0371` |
+| AllowedMethodsEnforcer | `0x816e3D68470E84dB37799eCA14dC9EbD86b37591` |
+| ERC20TransferAmountEnforcer | `0x4cc2931c6DB25aAAa6360b802B7987f2a39Ef559` |
+| ERC20PeriodTransferEnforcer | `0x73E8aef3aD187524fD44b8f9b5b700689fE41071` |
+| TimestampEnforcer | `0x972298257a69792b0219900d8a2C9dAeC8094cC6` |
+| **DojangCaveatEnforcer** | `0x8C9c8437C27003f3d86F438c7147668d9cC5948C` |
+| **JipsaPerTxCapEnforcer** | `0xdea5DF3357e0EEf6A841d3639d115eb57b42B642` |
 
 ## 정산 토큰 — tKRW
 
@@ -180,10 +198,15 @@ cast send <주인EOA> --auth <EIP7702StatelessDeleGator주소> --private-key $OW
 cast code <주인EOA> --rpc-url https://sepolia-rpc.giwa.io
 ```
 
-> **주의**: `forge script`에서 `vm.signAndAttachDelegation`으로는 되지 않는다. forge 1.7.1
+> **주의 1**: `forge script`에서 `vm.signAndAttachDelegation`으로는 되지 않는다. forge 1.7.1
 > 기준 브로드캐스트 시 type-4 트랜잭션이 만들어지지 않으며, 스크립트가
 > "ONCHAIN EXECUTION COMPLETE & SUCCESSFUL"을 출력해도 코드가 심기지 않는다.
-> 포크에서 실측 확인했다. 위 `cast send --auth`는 `type 4`로 정상 적용된다.
+> 로컬 anvil(상태 반영 지연이 없는 환경)에서 같은 노드로 비교해 확인했다.
+
+> **주의 2**: `cast send` 직후 바로 `cast code`를 읽으면 아직 `0x`로 보일 수 있다.
+> 공개 RPC의 상태 반영 지연이며 실패가 아니다. EIP-7702는 유효하지 않은
+> authorization을 revert 없이 건너뛰므로 `status 1`만으로는 성공을 판정할 수 없다 —
+> **한 블록 정도 뒤에 `cast code`로 다시 확인할 것.**
 
 > **지갑 제약**: type-4 authorization 서명은 개인키 접근이 필요해 MetaMask 인젝티드
 > 프로바이더로는 임의 체인에서 불가하다. 그래서 이 단계만 주인 데모 키로 CLI에서
