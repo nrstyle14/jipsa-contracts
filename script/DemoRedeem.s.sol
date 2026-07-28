@@ -62,6 +62,7 @@ contract DemoRedeem is Script {
         // 1) 주인 EOA에 tKRW 확보 (예치가 아니라 주인 지갑 자체의 잔액)
         if (TOKEN.balanceOf(owner) < FUND_OWNER) {
             vm.broadcast(deployerPk);
+            // forge-lint: disable-next-line(erc20-unchecked-transfer) — 실패 시 스크립트가 revert한다
             TOKEN.transfer(owner, FUND_OWNER);
         }
 
@@ -194,6 +195,8 @@ contract DemoRedeem is Script {
         });
         c_[4] = Caveat({
             enforcer: TIMESTAMP_ENFORCER,
+            // uint128로의 축소는 안전하다 (unix 초는 2^128을 넘지 않는다)
+            // forge-lint: disable-next-line(unsafe-typecast)
             terms: abi.encodePacked(uint128(0), uint128(block.timestamp + VALID_DAYS * 1 days)),
             args: hex""
         });
