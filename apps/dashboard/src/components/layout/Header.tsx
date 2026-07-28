@@ -1,8 +1,8 @@
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { ADDR } from "@jipsa/delegation";
 import { useAccountStatus } from "../../hooks/useAccountStatus.js";
 import { Button, Chip, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
+import { FaucetButton } from "./FaucetButton.js";
 
 export function Header() {
   const { address, isConnected } = useAccount();
@@ -49,6 +49,7 @@ export function Header() {
       <div className="ml-auto flex items-center gap-2">
         {isConnected ? (
           <>
+            <FaucetButton />
             <a
               href={explorerAddress(address!)}
               target="_blank"
@@ -69,9 +70,6 @@ export function Header() {
           </Button>
         )}
       </div>
-
-      {/* tKRW faucet 버튼은 M2 (쓰기)에서 붙인다 — 토큰 주소는 여기서 노출해둔다 */}
-      <span className="sr-only">tKRW {ADDR.tKRW}</span>
     </header>
   );
 }

@@ -40,9 +40,22 @@ type-4 authorization 서명은 개인키 접근이 필요해 MetaMask 인젝티�
 불가하다. 그래서 7702 셋업은 **CLI 명령을 안내만** 하고, 대시보드는 어떤 형태로도
 개인키를 받지 않는다.
 
+## M2 (쓰기) 범위
+
+- **등록 마법사** 3단계 — ① `proposeBinding` 서명 ② 에이전트 수락 안내(CLI 명령 복사,
+  `cancelProposal`로 취소 가능) ③ 위임 EIP-712 서명 → `delegation.json` 다운로드
+- **tKRW faucet** — 쿨다운 중이면 남은 시간을 보여주고 비활성화
+- **긴급 철회** — `DelegationManager.disableDelegation` 직접 호출.
+  **자금 회수 단계가 없다** — tKRW는 처음부터 주인 EOA 잔액이고 끊는 것은 권한뿐이다.
+
+위임 발급은 **온체인 트랜잭션이 아니다.** EIP-712 서명만 받으며 예치도 없다.
+`startDate`는 체인 시각을 쓴다 — 로컬 벽시계가 앞서면 기간 enforcer가
+`transfer-not-started`로 첫 리딤을 막는다.
+
+에이전트 수락 명령은 `acceptBinding(address)`로 `expectedOwner`를 넘긴다.
+제안은 누구나 덮어쓸 수 있어, 수락 직전 다른 주인으로 바뀌는 프런트러닝을 막는 설계다.
+
 ## 남은 마일스톤
 
-- **M2 쓰기**: 등록 마법사(바인딩 → 위임 EIP-712 서명 → JSON 다운로드) · faucet ·
-  철회(`disableDelegation`)
 - **M3 실시간**: 이벤트 폴링 + Flashblocks pending 선반영 + 차단 행/토스트
   (revert 사유 디코딩은 `@jipsa/delegation`의 `decodeRevertFromError()`가 이미 제공)

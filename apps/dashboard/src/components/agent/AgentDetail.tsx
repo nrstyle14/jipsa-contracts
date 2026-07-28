@@ -5,6 +5,7 @@ import { useAccountStatus } from "../../hooks/useAccountStatus.js";
 import type { Delegation } from "@jipsa/delegation";
 import { Button, Card, Chip, Gauge, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
+import { RevokeButton } from "./RevokeButton.js";
 
 export function AgentDetail({
   agent,
@@ -56,9 +57,9 @@ export function AgentDetail({
           <div className="flex items-center gap-2">
             {spend.disabled === true && <Chip tone="red">철회됨</Chip>}
             {p?.verifiedRecipientOnly && <Chip tone="ok">검증 수신처 전용</Chip>}
-            <Button disabled title="M2에서 활성화">
-              정책 수정
-            </Button>
+            {delegation && boundToThisDelegation && spend.disabled === false && (
+              <RevokeButton delegation={delegation} />
+            )}
           </div>
         </div>
 

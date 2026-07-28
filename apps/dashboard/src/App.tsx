@@ -9,6 +9,7 @@ import {
   DelegationAccountBanner,
   DojangBanner,
 } from "./components/onboarding/Gates.js";
+import { RegisterWizard } from "./components/onboarding/RegisterWizard.js";
 import { useAccountStatus } from "./hooks/useAccountStatus.js";
 import { useAgents } from "./hooks/useAgents.js";
 import { useStoredDelegation } from "./hooks/useStoredDelegation.js";
@@ -21,6 +22,7 @@ export default function App() {
   const { agents } = useAgents();
   const stored = useStoredDelegation();
   const [selected, setSelected] = useState<Address | undefined>();
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // 첫 에이전트를 자동 선택
   useEffect(() => {
@@ -42,7 +44,11 @@ export default function App() {
             )}
 
             <div className="flex flex-col gap-5 md:flex-row">
-              <Sidebar selected={selected} onSelect={setSelected} />
+              <Sidebar
+                selected={selected}
+                onSelect={setSelected}
+                onRegister={() => setWizardOpen(true)}
+              />
               {selected ? (
                 <AgentDetail
                   agent={selected}
@@ -61,6 +67,16 @@ export default function App() {
           </>
         )}
       </main>
+
+      {wizardOpen && (
+        <RegisterWizard
+          onClose={() => setWizardOpen(false)}
+          onDelegation={(d) => {
+            stored.save(d);
+            setSelected(d.delegate);
+          }}
+        />
+      )}
     </div>
   );
 }
