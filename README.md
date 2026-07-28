@@ -213,6 +213,33 @@ cast code <주인EOA> --rpc-url https://sepolia-rpc.giwa.io
 > 처리한다. **코드가 심어진 뒤의 모든 주인 동작(위임 EIP-712 서명, `disableDelegation`,
 > 일반 tx)은 MetaMask로 정상 수행된다.**
 
+### 실체인 데모 실행
+
+```bash
+forge script script/DemoRedeem.s.sol --rpc-url giwa_sepolia --broadcast
+```
+
+자금 이전 → 바인딩(제안·수락) → 위임 EIP-712 서명(오프체인) → 에이전트 리딤을
+한 번에 수행한다. `PRIVATE_KEY`(배포자)·`OWNER_PRIVATE_KEY`(도장 보유 주인)·
+`AGENT_PRIVATE_KEY`(에이전트)가 필요하다.
+
+건당 상한이 실제로 막히는지는 브로드캐스트 없이 확인할 수 있다 —
+`PerTxCapExceeded`로 revert해야 정상이다.
+
+```bash
+forge script script/DemoRedeem.s.sol --sig "overCap()" --rpc-url giwa_sepolia
+```
+
+GIWA Sepolia 실행 결과 (2026-07-28):
+
+| 단계 | gas | 결과 |
+|---|---|---|
+| `transfer` (주인 EOA 자금) | 53,804 | 성공 |
+| `proposeBinding` | 130,056 | 성공 |
+| `acceptBinding` | 195,047 | 성공 |
+| `redeemDelegations` | 217,075 | 성공 — 주인 EOA에서 250 tKRW 직접 지급 |
+| 상한 초과 리딤 | — | `PerTxCapExceeded`로 차단 |
+
 ### 격리 모델의 차이 (중요)
 
 `PolicyAccount`는 **예치한 예산**이 피해 상한이었다. 7702 모델은 예치가 없고 주인 EOA
