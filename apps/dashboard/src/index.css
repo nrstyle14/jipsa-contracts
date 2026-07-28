@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+  }
+  /* 숫자는 자리수가 흔들리지 않게 (설계서 §6) */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
