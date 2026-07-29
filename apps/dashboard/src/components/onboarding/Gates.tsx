@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ADDR } from "@jipsa/delegation";
 import { Button, Card } from "../ui.js";
 import { expectedDelegationCode } from "../../hooks/useAccountStatus.js";
+import { WhyDelegationAccountModal } from "./WhyDelegationAccount.js";
 
 export function ConnectGate({ onConnect }: { onConnect: () => void }) {
   return (
@@ -53,11 +55,21 @@ export function DelegationAccountBanner({
   code: string | undefined;
 }) {
   const cmd = `cast send ${address} --auth ${ADDR.delegator7702Impl} --private-key $OWNER_PRIVATE_KEY --rpc-url https://sepolia-rpc.giwa.io`;
+  const [why, setWhy] = useState(false);
   return (
     <Card className="mb-4 border-red/50">
-      <h3 className="mb-1 text-sm font-bold text-[#E8A6A1]">
-        이 지갑은 아직 위임 계정이 아닙니다
-      </h3>
+      {why && <WhyDelegationAccountModal onClose={() => setWhy(false)} />}
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-bold text-[#E8A6A1]">
+          이 지갑은 아직 위임 계정이 아닙니다
+        </h3>
+        <button
+          className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted hover:border-blue hover:text-text"
+          onClick={() => setWhy(true)}
+        >
+          이걸 왜 해야하나요?
+        </button>
+      </div>
       <p className="mb-3 text-sm text-muted">
         EIP-7702 코드가 심겨야 위임을 발급할 수 있습니다. MetaMask는 임의 체인에서 type-4
         authorization을 서명하지 못하므로 <b>아래 명령을 터미널에서 1회</b> 실행하세요.
