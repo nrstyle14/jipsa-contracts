@@ -60,6 +60,7 @@ export default function App() {
               <Sidebar
                 selected={selected}
                 onSelect={setSelected}
+                delegation={stored.delegation}
                 onRegister={() => {
                   setIssueFor(undefined);
                   setWizardOpen(true);
