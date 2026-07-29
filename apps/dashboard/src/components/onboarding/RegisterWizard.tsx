@@ -35,16 +35,19 @@ type Step = 1 | 2 | 3;
 export function RegisterWizard({
   onClose,
   onDelegation,
+  initialAgent,
 }: {
   onClose: () => void;
   onDelegation: (d: Delegation) => void;
+  /** 이미 귀속된 에이전트에 위임만 새로 발급할 때 미리 채운다 */
+  initialAgent?: Address;
 }) {
   const { address: owner } = useAccount();
   const provider = useDelegationProvider();
   const { writeContractAsync } = useWriteContract();
 
   const [step, setStep] = useState<Step>(1);
-  const [agentInput, setAgentInput] = useState("");
+  const [agentInput, setAgentInput] = useState<string>(initialAgent ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [policy, setPolicy] = useState(DEFAULTS);
@@ -142,7 +145,9 @@ export function RegisterWizard({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
       <Card className="max-h-[90dvh] w-full max-w-xl overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold">에이전트 등록</h2>
+          <h2 className="text-base font-bold">
+            {initialAgent ? "위임 발급" : "에이전트 등록"}
+          </h2>
           <button className="text-muted hover:text-text" onClick={onClose}>
             닫기
           </button>
@@ -175,9 +180,21 @@ export function RegisterWizard({
             {agentInput && !agent && (
               <p className="text-[11px] text-[#E8A6A1]">주소 형식이 올바르지 않습니다.</p>
             )}
-            <Button variant="primary" disabled={!agent || busy} onClick={propose}>
-              {busy ? "서명 대기…" : "바인딩 제안 서명"}
-            </Button>
+            {acceptedByAgent ? (
+              <>
+                <p className="text-[11px] text-muted">
+                  이 에이전트는 이미 내게 귀속되어 있습니다. 바인딩 단계는 건너뛰고 위임만 새로
+                  발급합니다 — 다시 제안하면 <code>AgentAlreadyBound</code>로 실패합니다.
+                </p>
+                <Button variant="primary" onClick={() => setStep(3)}>
+                  다음: 위임 서명
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" disabled={!agent || busy} onClick={propose}>
+                {busy ? "서명 대기…" : "바인딩 제안 서명"}
+              </Button>
+            )}
           </div>
         )}
 
