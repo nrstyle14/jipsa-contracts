@@ -124,9 +124,14 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 /**
- * 위임은 오프체인 산출물이라 온체인 조회로 찾을 수 없다.
- * M2 마법사가 붙기 전까지는 CLI로 발급한 delegation.json 을 불러와 확인한다.
- * (개인키가 아니라 **서명된 공개 산출물**이다)
+ * 위임이 아직 없을 때의 안내.
+ *
+ * 7702 모델에는 정책을 담은 온체인 레코드가 없다 — 정책값은 주인이 서명한 위임의
+ * caveat terms 안에만 존재하므로 체인 조회로는 찾을 수 없다. 그래서 두 경로 중
+ * 하나가 필요하다: 이미 발급한 `delegation.json`을 불러오거나, 등록 마법사로 새로
+ * 서명해 발급하거나(발급 즉시 저장된다).
+ *
+ * 불러오는 파일은 개인키가 아니라 **서명된 공개 산출물**이다.
  */
 function NoDelegation({
   onImport,
@@ -138,8 +143,9 @@ function NoDelegation({
   return (
     <div className="text-sm text-muted">
       <p className="mb-2">
-        불러온 위임이 없습니다. 정책·게이지는 서명된 위임의 caveat에서 읽으므로, 발급한{" "}
-        <code className="text-text">delegation.json</code>을 불러오세요. (M2에서 마법사로 대체)
+        아직 이 화면에 붙은 위임이 없습니다. 정책·게이지는 서명된 위임의 caveat에서 읽고 온체인에는
+        정책 레코드가 없으므로, 이미 발급한 <code className="text-text">delegation.json</code>을
+        불러오거나 <b>+ 등록</b> 마법사로 새로 발급하세요.
       </p>
       <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-line bg-surface2 px-3 py-2 text-sm hover:border-blue">
         delegation.json 불러오기
