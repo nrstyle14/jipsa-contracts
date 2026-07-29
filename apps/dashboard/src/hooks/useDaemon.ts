@@ -104,7 +104,12 @@ export function useDaemon(baseUrl: string = defaultBase()): Daemon {
       if (!baseUrl) return { error: "이 환경에는 에이전트 데몬이 없습니다 (로컬에서 실행하세요)" };
       setBusy(true);
       try {
-        const r = await fetch(`${baseUrl}${path}`, { method: "POST" });
+        // 원격(터널)로 붙일 때는 데몬이 토큰을 요구한다 — CORS 는 curl 을 막지 못한다
+        const token = import.meta.env.VITE_DAEMON_TOKEN as string | undefined;
+        const r = await fetch(`${baseUrl}${path}`, {
+          method: "POST",
+          headers: token ? { "x-jipsa-token": token } : undefined,
+        });
         return (await r.json()) as { blocked?: DaemonBlocked[]; ok?: boolean; error?: string };
       } catch (e) {
         return { error: e instanceof Error ? e.message : String(e) };

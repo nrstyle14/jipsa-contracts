@@ -51,12 +51,26 @@ const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
  * ⚠️ 아무 origin이나 열지 말 것. /inject 는 실제 tx를 브로드캐스트한다. 피해는 caveat
  *    안으로 제한되지만(건당 50 · 일간 500), 남이 마음대로 트리거할 이유는 없다.
  */
-const ALLOWED_ORIGINS = (
-  optionalString("DASHBOARD_ORIGIN") ?? "http://localhost:5173,http://127.0.0.1:5173"
-)
+const LOCAL_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const ALLOWED_ORIGINS = (optionalString("DASHBOARD_ORIGIN") ?? LOCAL_ORIGINS.join(","))
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+
+/**
+ * 쓰기 엔드포인트 토큰.
+ *
+ * ⚠️ **CORS는 보호 장치가 아니다.** 브라우저만 지키고 `curl`은 무시한다. 지금 실제 보호는
+ *    서버가 loopback(127.0.0.1)에만 바인딩된다는 점뿐이다. 그런데 터널(ngrok·cloudflared)로
+ *    노출하는 순간 `/inject`·`/pay-now`가 **URL을 아는 누구에게나** 열린다 —
+ *    `/inject`는 실제 tx를 브로드캐스트한다 (피해는 caveat 안이지만 남이 트리거할 이유가 없다).
+ *
+ *    그래서 규칙을 둔다:
+ *      · `DAEMON_TOKEN`이 설정돼 있으면 쓰기 요청에 `x-jipsa-token` 헤더가 일치해야 한다
+ *      · 설정돼 있지 않으면 **로컬 origin 외의 쓰기 요청을 거부**한다
+ *    즉 원격 노출은 토큰 없이는 불가능하다.
+ */
+const DAEMON_TOKEN = optionalString("DAEMON_TOKEN");
 
 /**
  * 인젝션 대본 — 대시보드 팝업이 이 문구를 그대로 보여준다.
@@ -283,13 +297,30 @@ function cors(req: IncomingMessage, res: ServerResponse): void {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("access-control-allow-origin", origin);
-    res.setHeader("access-control-allow-headers", "content-type");
+    res.setHeader("access-control-allow-headers", "content-type,x-jipsa-token");
     res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
     // Chrome의 Private Network Access — 공개 페이지가 사설망 주소를 부를 때 요구한다
     if (req.headers["access-control-request-private-network"] === "true") {
       res.setHeader("access-control-allow-private-network", "true");
     }
   }
+}
+
+/**
+ * 쓰기 요청을 거부할 이유 — 없으면 undefined.
+ *
+ * origin 이 없는 요청(로컬 curl 등)은 loopback 바인딩상 반드시 로컬이므로 허용한다.
+ */
+function writeDenied(req: IncomingMessage): string | undefined {
+  const token = req.headers["x-jipsa-token"];
+  if (DAEMON_TOKEN) {
+    return token === DAEMON_TOKEN ? undefined : "DAEMON_TOKEN 이 일치하지 않습니다";
+  }
+  const origin = req.headers.origin;
+  if (origin && !LOCAL_ORIGINS.includes(origin)) {
+    return "원격 origin 에서 쓰기 요청을 하려면 DAEMON_TOKEN 을 설정하세요";
+  }
+  return undefined;
 }
 
 function json(res: ServerResponse, code: number, body: unknown): void {
@@ -325,6 +356,11 @@ function startServer(cli: Cli, ctx: () => { c: Clients; d: Delegation | undefine
 
     const isInject = url.pathname === "/inject";
     if (req.method === "POST" && (isInject || url.pathname === "/pay-now")) {
+      const denied = writeDenied(req);
+      if (denied) {
+        json(res, 403, { error: denied });
+        return;
+      }
       const { c, d, attacker } = ctx();
       if (!d) {
         json(res, 409, { error: "위임이 없습니다 — delegation.json 을 전달하세요" });
