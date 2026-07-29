@@ -1,8 +1,9 @@
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useBalance, useReadContract } from "wagmi";
 import { usePublicClient } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { ABI, ADDR } from "@jipsa/delegation";
 import type { Address, Hex } from "viem";
+import { useViewer } from "../viewer.js";
 
 /**
  * 연결된 계정의 상태 — 배지 3개(도장 · 7702 · tKRW)의 데이터 원천.
@@ -22,7 +23,8 @@ export interface AccountStatus {
 }
 
 export function useAccountStatus(): AccountStatus {
-  const { address } = useAccount();
+  // 연결 계정이 아니라 viewer 주소 — 열람 모드에서도 배지·잔액이 채워져야 한다
+  const { address } = useViewer();
   const client = usePublicClient();
 
   const stamp = useReadContract({

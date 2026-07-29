@@ -292,11 +292,17 @@ function findTransfer(logs: readonly { address: string; topics: readonly Hex[]; 
 }
 
 /**
- * 실패한 tx를 **직전 블록 상태에서** `eth_call`로 재실행해 revert 사유를 얻는다.
+ * 실패한 tx를 재실행해 revert 사유를 얻는다.
  *
- * @dev 영수증에는 사유가 없다. 확정된 블록 번호로 호출하면 이미 상태가 바뀌어
- *      다른 사유가 나올 수 있으므로 `blockNumber - 1`을 쓴다.
- *      GIWA 공개 RPC는 `eth_call` 실패 시 revert 데이터를 정상 반환한다 (실측).
+ * ⚠️ **영수증의 블록 번호는 `latest`보다 앞설 수 있다.** Flashblocks는 아직 정식 확정되지
+ *    않은 preconfirm 블록의 영수증을 돌려준다 (실측: 영수증 block 31960045 vs latest
+ *    31960043). 그 번호로 `eth_call` 하면 revert가 아니라 **빈 성공**이 돌아와 사유가
+ *    비고, 화면에는 "차단 · 사유 미확인"이 뜬다 — Act 3의 적색 행이 바로 이 경로다.
+ *    그래서 블록이 확정될 때까지 잠깐 기다린 뒤 직전 블록에서 재실행하고, 그래도 통과하면
+ *    `latest`에서 한 번 더 시도한다.
+ *
+ * @dev 직전 블록을 먼저 쓰는 이유: 누적·기간 한도처럼 상태에 의존하는 사유는 tx 직전
+ *      상태에서 재실행해야 실제로 걸린 사유가 나온다.
  */
 async function revertReasonOf(
   client: NonNullable<ReturnType<typeof usePublicClient>>,
@@ -304,16 +310,27 @@ async function revertReasonOf(
   blockNumber: bigint,
 ) {
   const tx = await client.getTransaction({ hash });
-  try {
-    await client.call({
-      account: tx.from,
-      to: tx.to ?? undefined,
-      data: tx.input,
-      value: tx.value,
-      blockNumber: blockNumber - 1n,
-    });
-    return undefined; // 재실행이 통과하면 사유를 특정할 수 없다
-  } catch (e) {
-    return decodeRevertFromError(e);
+
+  // 블록이 정식 확정될 때까지 (최대 ~3초) — 넘겨도 아래 latest 폴백이 받는다
+  for (let i = 0; i < 6; i++) {
+    if ((await client.getBlockNumber()) >= blockNumber) break;
+    await new Promise((r) => setTimeout(r, 500));
   }
+
+  for (const at of [blockNumber - 1n, undefined] as const) {
+    try {
+      await client.call({
+        account: tx.from,
+        to: tx.to ?? undefined,
+        data: tx.input,
+        value: tx.value,
+        ...(at !== undefined ? { blockNumber: at } : {}),
+      });
+      // 통과했다 — 다음 후보로
+    } catch (e) {
+      const decoded = decodeRevertFromError(e);
+      if (decoded) return decoded;
+    }
+  }
+  return undefined;
 }

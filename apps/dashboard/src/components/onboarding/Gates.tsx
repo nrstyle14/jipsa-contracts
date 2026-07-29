@@ -4,16 +4,29 @@ import { Button, Card } from "../ui.js";
 import { expectedDelegationCode } from "../../hooks/useAccountStatus.js";
 import { WhyDelegationAccountModal } from "./WhyDelegationAccount.js";
 
-export function ConnectGate({ onConnect }: { onConnect: () => void }) {
+export function ConnectGate({
+  onConnect,
+  onViewDemo,
+}: {
+  onConnect: () => void;
+  onViewDemo: () => void;
+}) {
   return (
     <Card className="mx-auto mt-16 max-w-md text-center">
       <h2 className="mb-2 text-lg font-bold">지갑을 연결하세요</h2>
       <p className="mb-4 text-sm text-muted">
         주인 지갑을 연결하면 도장 상태와 에이전트 목록을 불러옵니다.
       </p>
-      <Button variant="primary" onClick={onConnect}>
-        MetaMask 연결
-      </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button variant="primary" onClick={onConnect}>
+          MetaMask 연결
+        </Button>
+        <Button onClick={onViewDemo}>데모 계정 보기</Button>
+      </div>
+      <p className="mt-3 text-[11px] text-muted">
+        지갑이 없어도 데모 계정의 에이전트 · 정책 게이지 · 실시간 피드를 읽기 전용으로 볼 수
+        있습니다.
+      </p>
     </Card>
   );
 }

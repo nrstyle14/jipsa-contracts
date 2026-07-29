@@ -14,40 +14,22 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createWalletClient, encodeFunctionData, http, type Address, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import {
-  ABI,
-  ADDR,
-  CHAIN_ID,
-  DEMO,
-  FLASHBLOCKS_RPC_URL,
-  delegationFromJson,
-  encodeRedeem,
-  tkrw,
-} from "@jipsa/delegation";
-import { optionalAddress, optionalString, requirePrivateKey } from "../src/env.js";
+import type { Address } from "viem";
+import { DEMO, delegationFromJson, tkrw } from "@jipsa/delegation";
+import { agentClients } from "../src/clients.js";
+import { DELEGATION_MANAGER, redeemCalldata } from "../src/redeem.js";
+import { optionalAddress, optionalString } from "../src/env.js";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const inPath = optionalString("IN")
   ? resolve(optionalString("IN")!)
   : resolve(appRoot, "delegation.json");
-const rpcUrl = optionalString("RPC_URL") ?? FLASHBLOCKS_RPC_URL;
 const kind = (optionalString("KIND") ?? "pertx") as "pertx" | "recipient";
 /** 도장 없는 주소 */
 const attacker = optionalAddress("ATTACKER") ?? DEMO.attacker;
 
-const chain = {
-  id: CHAIN_ID,
-  name: "GIWA Sepolia",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: [rpcUrl] } },
-} as const;
-
 async function main() {
-  const agentKey = requirePrivateKey("AGENT_PRIVATE_KEY");
-  const account = privateKeyToAccount(agentKey);
-  const wallet = createWalletClient({ account, chain, transport: http(rpcUrl) });
+  const { account, wallet } = agentClients();
 
   const d = delegationFromJson(JSON.parse(readFileSync(inPath, "utf8")) as unknown);
 
@@ -56,12 +38,7 @@ async function main() {
   const to: Address = kind === "recipient" ? attacker : DEMO.merchantA;
   const amount = kind === "recipient" ? tkrw(2) : tkrw(51);
 
-  const call = encodeRedeem(d, to, amount);
-  const data: Hex = encodeFunctionData({
-    abi: ABI.delegationManager,
-    functionName: "redeemDelegations",
-    args: [call.permissionContexts, call.modes, call.executionCallDatas],
-  });
+  const data = redeemCalldata(d, to, amount);
 
   console.log("차단 유발 리딤 브로드캐스트");
   console.log("  종류    :", kind === "recipient" ? "미검증 수신처" : "건당 초과");
@@ -71,7 +48,7 @@ async function main() {
 
   // 가스 추정은 실패하므로 직접 지정한다 (eth_estimateGas가 revert를 그대로 되돌린다)
   const hash = await wallet.sendTransaction({
-    to: ADDR.delegationManager,
+    to: DELEGATION_MANAGER,
     data,
     gas: 800_000n,
   });

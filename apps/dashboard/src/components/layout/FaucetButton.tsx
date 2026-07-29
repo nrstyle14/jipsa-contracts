@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useViewer } from "../../viewer.js";
 import { ABI, ADDR } from "@jipsa/delegation";
 import { Button } from "../ui.js";
 
@@ -9,6 +10,7 @@ import { Button } from "../ui.js";
  */
 export function FaucetButton() {
   const { address } = useAccount();
+  const { isReadOnly } = useViewer();
   const { writeContractAsync } = useWriteContract();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -47,9 +49,11 @@ export function FaucetButton() {
   return (
     <Button
       onClick={claim}
-      disabled={busy || cooling}
+      disabled={busy || cooling || isReadOnly}
       title={
-        error ?? (cooling ? `쿨다운 ${hoursLeft}시간 남음` : "1,000 tKRW 받기 (24시간마다)")
+        isReadOnly
+          ? "읽기 전용 — 데모 계정을 보는 중입니다"
+          : (error ?? (cooling ? `쿨다운 ${hoursLeft}시간 남음` : "1,000 tKRW 받기 (24시간마다)"))
       }
     >
       {busy ? "요청 중…" : cooling ? `faucet · ${hoursLeft}h` : "tKRW faucet"}

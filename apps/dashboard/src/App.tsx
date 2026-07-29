@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
+import { useViewer } from "./viewer.js";
 import type { Address } from "viem";
 import { Header } from "./components/layout/Header.js";
 import { Sidebar } from "./components/agent/Sidebar.js";
@@ -14,10 +15,15 @@ import { useAccountStatus } from "./hooks/useAccountStatus.js";
 import { useAgents } from "./hooks/useAgents.js";
 import { useStoredDelegation } from "./hooks/useStoredDelegation.js";
 import { Card } from "./components/ui.js";
+import { ReadOnlyBanner } from "./components/onboarding/ReadOnlyBanner.js";
+import { DEMO_OWNER } from "./viewer.js";
 
 export default function App() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const viewer = useViewer();
+  // 화면이 조회하는 주소는 연결 계정이 아니라 viewer 주소다 (열람 모드 지원)
+  const address = viewer.address;
   const status = useAccountStatus();
   const { agents } = useAgents();
   const stored = useStoredDelegation();
@@ -36,12 +42,17 @@ export default function App() {
       <Header />
 
       <main className="mx-auto max-w-[1200px] px-5 py-5">
-        {!isConnected ? (
-          <ConnectGate onConnect={() => connectors[0] && connect({ connector: connectors[0] })} />
+        {!viewer.hasTarget ? (
+          <ConnectGate
+            onConnect={() => connectors[0] && connect({ connector: connectors[0] })}
+            onViewDemo={() => viewer.setViewAs(DEMO_OWNER)}
+          />
         ) : (
           <>
+            {viewer.isReadOnly && <ReadOnlyBanner />}
             {status.hasStamp === false && <DojangBanner />}
-            {status.isDelegationAccount === false && address && (
+            {/* 7702 안내는 내 계정일 때만 — 남의 계정을 열람하며 CLI 명령을 보여줄 이유가 없다 */}
+            {!viewer.isReadOnly && status.isDelegationAccount === false && address && (
               <DelegationAccountBanner address={address} code={status.code} />
             )}
 
@@ -49,10 +60,7 @@ export default function App() {
               <Sidebar
                 selected={selected}
                 onSelect={setSelected}
-                onRegister={() => {
-                  setIssueFor(undefined);
-                  setWizardOpen(true);
-                }}
+                delegation={stored.delegation}
               />
               {selected ? (
                 <AgentDetail

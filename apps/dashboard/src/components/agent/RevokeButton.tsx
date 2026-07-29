@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Delegation } from "@jipsa/delegation";
 import { useDelegationProvider } from "../../hooks/useDelegationProvider.js";
+import { useViewer } from "../../viewer.js";
 import { Button } from "../ui.js";
 import { explorerTx } from "../../config/chain.js";
 
@@ -10,7 +11,15 @@ import { explorerTx } from "../../config/chain.js";
  * 7702 모델이라 **자금 회수 단계가 없다.** tKRW는 처음부터 주인 EOA 잔액이었고
  * 위임은 지출 권한만 부여했다. 끊는 것은 권한뿐이다.
  */
-export function RevokeButton({ delegation }: { delegation: Delegation }) {
+export function RevokeButton({
+  delegation,
+  label = "긴급 철회",
+}: {
+  delegation: Delegation;
+  /** 버튼 문구 — 공격 결과 팝업에서는 "위임 즉시 해제"로 부른다 */
+  label?: string;
+}) {
+  const { isReadOnly } = useViewer();
   const provider = useDelegationProvider();
   const [busy, setBusy] = useState(false);
   const [hash, setHash] = useState<string | undefined>();
@@ -55,8 +64,13 @@ export function RevokeButton({ delegation }: { delegation: Delegation }) {
           <Button onClick={() => setConfirming(false)}>취소</Button>
         </>
       ) : (
-        <Button variant="red" onClick={() => setConfirming(true)}>
-          긴급 철회
+        <Button
+          variant="red"
+          disabled={isReadOnly}
+          title={isReadOnly ? "읽기 전용 — 데모 계정을 보는 중입니다" : undefined}
+          onClick={() => setConfirming(true)}
+        >
+          {label}
         </Button>
       )}
       {error && <span className="text-[11px] text-[#E8A6A1]">{error}</span>}
