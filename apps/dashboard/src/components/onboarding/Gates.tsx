@@ -1,16 +1,11 @@
 import { useState } from "react";
 import { ADDR } from "@jipsa/delegation";
 import { Button, Card } from "../ui.js";
+import { WalletPicker } from "../layout/WalletPicker.js";
 import { expectedDelegationCode } from "../../hooks/useAccountStatus.js";
 import { WhyDelegationAccountModal } from "./WhyDelegationAccount.js";
 
-export function ConnectGate({
-  onConnect,
-  onViewDemo,
-}: {
-  onConnect: () => void;
-  onViewDemo: () => void;
-}) {
+export function ConnectGate({ onViewDemo }: { onViewDemo: () => void }) {
   return (
     <Card className="mx-auto mt-16 max-w-md text-center">
       <h2 className="mb-2 text-lg font-bold">지갑을 연결하세요</h2>
@@ -18,9 +13,7 @@ export function ConnectGate({
         주인 지갑을 연결하면 도장 상태와 에이전트 목록을 불러옵니다.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button variant="primary" onClick={onConnect}>
-          MetaMask 연결
-        </Button>
+        <WalletPicker />
         <Button onClick={onViewDemo}>데모 계정 보기</Button>
       </div>
       <p className="mt-3 text-[11px] text-muted">
