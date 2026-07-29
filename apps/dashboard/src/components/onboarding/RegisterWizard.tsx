@@ -322,9 +322,27 @@ export function RegisterWizard({
         )}
 
         {error && (
-          <p className="mt-3 rounded-btn border border-red/40 bg-redSoft p-2 text-[11px] text-[#E8A6A1]">
-            {error}
-          </p>
+          <div className="mt-3 rounded-btn border border-red/40 bg-redSoft p-2.5 text-[11px] text-[#E8A6A1]">
+            <p>{error}</p>
+            {/*
+              MetaMask 가 위임 서명을 정책적으로 차단하는 경우가 있다. 그때 raw 오류만
+              보여주면 막힌 채로 끝나므로, 같은 정책을 발급하는 CLI 명령을 여기서 준다.
+            */}
+            {/cannot sign delegations|차단했습니다/i.test(error) && (
+              <div className="mt-2 border-t border-red/30 pt-2">
+                <p className="mb-1 text-muted">
+                  주인 키로 CLI 발급 — 아래 명령이 같은 데모 정책(5,000 · 50 · 500 · 7일 ·
+                  검증 수신처 ON)으로 <code className="text-text">delegation.json</code>을 만듭니다.
+                </p>
+                <pre className="num overflow-x-auto rounded-btn border border-line bg-bg p-2 text-[10.5px] leading-relaxed text-muted">
+                  {GRANT_CMD}
+                </pre>
+                <Button className="mt-1" onClick={() => void navigator.clipboard.writeText(GRANT_CMD)}>
+                  명령 복사
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </Card>
     </div>
@@ -332,6 +350,10 @@ export function RegisterWizard({
 }
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+
+/** MetaMask 가 위임 서명을 막을 때의 대안 — grant.ts 가 같은 데모 정책을 쓴다 */
+const GRANT_CMD =
+  "cd ~/dev/jipsa-contracts && set -a && source .env && set +a && pnpm -F @jipsa/agent grant";
 
 function NumField({
   label,
