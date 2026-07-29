@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { useAgents } from "../../hooks/useAgents.js";
+import { useAgentLabels } from "../../hooks/useAgentLabels.js";
 import { Button, Card, Chip, shortAddr } from "../ui.js";
 
 export function Sidebar({
@@ -12,6 +13,7 @@ export function Sidebar({
   onRegister: () => void;
 }) {
   const { agents, isLoading } = useAgents();
+  const { labelOf } = useAgentLabels();
 
   return (
     <aside className="w-full shrink-0 space-y-3 md:w-72">
@@ -41,7 +43,7 @@ export function Sidebar({
           }`}
         >
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-sm font-bold">리서치봇</span>
+            <span className="truncate text-sm font-bold">{labelOf(a)}</span>
             <Chip tone="ok">동작 중</Chip>
           </div>
           <span className="num text-[11px] text-muted">{shortAddr(a)}</span>
