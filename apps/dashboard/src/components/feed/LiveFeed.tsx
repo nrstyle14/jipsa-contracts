@@ -13,7 +13,7 @@ export function LiveFeed({ owner }: { owner: Address | undefined }) {
     <Card>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold">실시간 지출 피드</h3>
-        <span className="text-[11px] text-muted">확정 1s · Pending 300ms (Flashblocks)</span>
+        <span className="text-[11px] text-muted">확정 1s · Pending 500ms (Flashblocks)</span>
       </div>
 
       <BlockedToast row={blocked} />

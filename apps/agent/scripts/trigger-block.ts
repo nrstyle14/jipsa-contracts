@@ -35,7 +35,7 @@ const inPath = optionalString("IN")
 const rpcUrl = optionalString("RPC_URL") ?? FLASHBLOCKS_RPC_URL;
 const kind = (optionalString("KIND") ?? "pertx") as "pertx" | "recipient";
 /** 도장 없는 주소 */
-const attacker = optionalAddress("ATTACKER") ?? "0x000000000000000000000000000000000000dEaD";
+const attacker = optionalAddress("ATTACKER") ?? DEMO.attacker;
 
 const chain = {
   id: CHAIN_ID,

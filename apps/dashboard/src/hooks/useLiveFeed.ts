@@ -39,16 +39,20 @@ const MAX_ROWS = 50;
 const BACKFILL_BLOCKS = 40n;
 
 /**
- * Flashblocks pending 폴링 간격.
+ * Flashblocks pending 폴링 간격 — 설계서 값 500ms.
  *
- * 설계서는 500ms지만, 실측에서 하나의 tx가 `pending` 블록에 머무는 시간은 **약 600ms**였다
- * (200ms 간격 폴링에서 연속 3회만 히트, 2026-07-29 GIWA Sepolia). 500ms로는 마진이 거의
- * 없어 Pending 선반영을 놓칠 수 있으므로 300ms로 좁혔다. RTT가 ~40ms라 부하는 무의미하다.
+ * 실측: 하나의 tx가 `pending` 블록에 머무는 시간은 **약 600ms**다 (200ms 간격 폴링에서
+ * 연속 3회만 히트, 2026-07-29 GIWA Sepolia). 600 > 500 이므로 500ms면 창을 놓치지 않는다.
+ *
+ * ⚠️ 마진을 더 주려고 300ms까지 좁혔다가 되돌렸다. `eth_getBlockByNumber("pending", true)`는
+ *    블록의 전체 tx 객체(보통 16~21건)를 돌려주는 무거운 호출이고, GIWA 공개 RPC는 이런
+ *    호출을 몰아치면 `over rate limit`으로 거절한다 (에이전트 스크립트에서 실측).
+ *    한 번 걸리면 회복에 시간이 걸려 데모 도중에는 치명적이다 — 더 좁히지 말 것.
  *
  * ⚠️ 브라우저는 백그라운드 탭의 타이머를 ~1초로 클램프한다 — 데모 중에는 탭을 포그라운드에
  *    두어야 Pending 행이 보인다 (확정·차단 행은 영향 없다).
  */
-const PENDING_POLL_MS = 300;
+const PENDING_POLL_MS = 500;
 
 /** tKRW Transfer — 금액·수신처의 유일한 출처 (RedeemedDelegation은 금액을 담지 않는다) */
 const TRANSFER_EVENT = parseAbiItem(
