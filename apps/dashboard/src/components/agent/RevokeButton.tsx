@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Delegation } from "@jipsa/delegation";
 import { useDelegationProvider } from "../../hooks/useDelegationProvider.js";
+import { useViewer } from "../../viewer.js";
 import { Button } from "../ui.js";
 import { explorerTx } from "../../config/chain.js";
 
@@ -11,6 +12,7 @@ import { explorerTx } from "../../config/chain.js";
  * 위임은 지출 권한만 부여했다. 끊는 것은 권한뿐이다.
  */
 export function RevokeButton({ delegation }: { delegation: Delegation }) {
+  const { isReadOnly } = useViewer();
   const provider = useDelegationProvider();
   const [busy, setBusy] = useState(false);
   const [hash, setHash] = useState<string | undefined>();
@@ -55,7 +57,12 @@ export function RevokeButton({ delegation }: { delegation: Delegation }) {
           <Button onClick={() => setConfirming(false)}>취소</Button>
         </>
       ) : (
-        <Button variant="red" onClick={() => setConfirming(true)}>
+        <Button
+          variant="red"
+          disabled={isReadOnly}
+          title={isReadOnly ? "읽기 전용 — 데모 계정을 보는 중입니다" : undefined}
+          onClick={() => setConfirming(true)}
+        >
           긴급 철회
         </Button>
       )}

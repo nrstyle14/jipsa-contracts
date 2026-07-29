@@ -4,6 +4,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.js";
 import { wagmiConfig } from "./config/wagmi.js";
+import { ViewerProvider } from "./viewer.js";
 import "./index.css";
 
 /**
@@ -18,7 +19,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ViewerProvider>
+          <App />
+        </ViewerProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </StrictMode>,

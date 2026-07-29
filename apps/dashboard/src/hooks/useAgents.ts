@@ -1,10 +1,16 @@
-import { useAccount, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
 import { ABI, ADDR } from "@jipsa/delegation";
 import type { Address } from "viem";
+import { useViewer } from "../viewer.js";
 
-/** 주인에게 바인딩된 에이전트 목록 (사이드바 카드) */
+/**
+ * 주인에게 바인딩된 에이전트 목록 (사이드바 카드).
+ *
+ * 연결 계정이 아니라 **viewer 주소**로 조회한다 — 읽기 전용 열람 모드에서도
+ * 데모 계정의 에이전트가 보여야 한다 (지시서 v1.1 추가 A).
+ */
 export function useAgents() {
-  const { address } = useAccount();
+  const { address } = useViewer();
   const q = useReadContract({
     address: ADDR.bindingRegistry,
     abi: ABI.ownerBindingRegistry,

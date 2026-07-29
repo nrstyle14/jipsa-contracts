@@ -2,6 +2,7 @@ import type { Address } from "viem";
 import { useState } from "react";
 import { useAgentBinding } from "../../hooks/useAgents.js";
 import { useAgentLabels } from "../../hooks/useAgentLabels.js";
+import { useViewer } from "../../viewer.js";
 import { useSpend } from "../../hooks/useSpend.js";
 import { useAccountStatus } from "../../hooks/useAccountStatus.js";
 import type { Delegation } from "@jipsa/delegation";
@@ -28,6 +29,7 @@ export function AgentDetail({
 }) {
   const binding = useAgentBinding(agent);
   const { labelOf, setLabel } = useAgentLabels();
+  const { isReadOnly } = useViewer();
   const status = useAccountStatus();
   const spend = useSpend(delegation);
   const p = spend.policy;
@@ -92,7 +94,12 @@ export function AgentDetail({
         </div>
 
         {!delegation && (
-          <NoDelegation onImport={onImport} error={importError} onIssue={onIssue} />
+          <NoDelegation
+            onImport={onImport}
+            error={importError}
+            onIssue={onIssue}
+            readOnly={isReadOnly}
+          />
         )}
 
         {delegation && !boundToThisDelegation && (
@@ -231,10 +238,12 @@ function NoDelegation({
   onImport,
   error,
   onIssue,
+  readOnly,
 }: {
   onImport: (text: string) => void;
   error: string | undefined;
   onIssue: () => void;
+  readOnly: boolean;
 }) {
   return (
     <div className="text-sm text-muted">
@@ -245,7 +254,12 @@ function NoDelegation({
         보여주려면 그 파일이 필요합니다.
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" onClick={onIssue}>
+        <Button
+          variant="primary"
+          onClick={onIssue}
+          disabled={readOnly}
+          title={readOnly ? "읽기 전용 — 데모 계정을 보는 중입니다" : undefined}
+        >
           위임장 새로 발급
         </Button>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-line bg-surface2 px-3 py-2 text-sm hover:border-blue">

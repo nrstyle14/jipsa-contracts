@@ -5,9 +5,13 @@ import { Button, Chip, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
 import { FaucetButton } from "./FaucetButton.js";
 import { WhyDelegationAccountModal } from "../onboarding/WhyDelegationAccount.js";
+import { DEMO_OWNER, useViewer } from "../../viewer.js";
 
 export function Header() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
+  const viewer = useViewer();
+  // 배지·잔액은 조회 대상(viewer) 기준이어야 한다 — 열람 모드에서 내 계정이 아닌 값을 보여준다
+  const address = viewer.address;
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const s = useAccountStatus();
@@ -26,7 +30,7 @@ export function Header() {
 
       <Chip tone="blue">GIWA Sepolia · 91342</Chip>
 
-      {isConnected && (
+      {viewer.hasTarget && (
         <>
           {/* 도장 배지 — 게이트 조회 결과 */}
           {s.hasStamp === undefined ? (
@@ -57,7 +61,11 @@ export function Header() {
       )}
 
       <div className="ml-auto flex items-center gap-2">
-        {isConnected ? (
+        {viewer.isReadOnly && <Chip tone="blue">읽기 전용</Chip>}
+        {isConnected && !viewer.isReadOnly && (
+          <Button onClick={() => viewer.setViewAs(DEMO_OWNER)}>데모 계정 보기</Button>
+        )}
+        {viewer.hasTarget ? (
           <>
             <FaucetButton />
             <a
@@ -68,7 +76,7 @@ export function Header() {
             >
               {shortAddr(address)}
             </a>
-            <Button onClick={() => disconnect()}>연결 해제</Button>
+            {isConnected && <Button onClick={() => disconnect()}>연결 해제</Button>}
           </>
         ) : (
           <Button

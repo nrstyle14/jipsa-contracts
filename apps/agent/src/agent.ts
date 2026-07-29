@@ -34,12 +34,12 @@ import {
   TKRW_DECIMALS,
   decodeRevertFromError,
   delegationFromJson,
-  encodeRedeem,
   getDelegationHash,
   tkrw,
   type Delegation,
 } from "@jipsa/delegation";
 import { agentClients } from "./clients.js";
+import { redeemCalldata } from "./redeem.js";
 import { optionalAddress, optionalString } from "./env.js";
 
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -340,15 +340,6 @@ async function ensureRevoked(
 // ---------------------------------------------------------------------------
 // 결제
 // ---------------------------------------------------------------------------
-
-function redeemCalldata(d: Delegation, to: Address, amount: bigint): Hex {
-  const call = encodeRedeem(d, to, amount);
-  return encodeFunctionData({
-    abi: ABI.delegationManager,
-    functionName: "redeemDelegations",
-    args: [call.permissionContexts, call.modes, call.executionCallDatas],
-  });
-}
 
 /** 정상 결제 1건 — 성공을 전제한다. */
 async function pay(ctx: Ctx, to: Address, amount: bigint, label: string): Promise<void> {
