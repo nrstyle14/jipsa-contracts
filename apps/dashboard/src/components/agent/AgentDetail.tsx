@@ -38,6 +38,7 @@ export function AgentDetail({
   return (
     <section className="min-w-0 flex-1 space-y-4">
       <AgentTitle
+        key={agent}
         agent={agent}
         label={labelOf(agent)}
         onRename={(name) => setLabel(agent, name)}
@@ -58,11 +59,21 @@ export function AgentDetail({
         />
         <Stat
           label="책임지는 사람"
-          value={binding.isAccountable ? shortAddr(binding.owner) : "없음"}
+          // 로딩 중(undefined)에 "없음"이라고 단정하면 안 된다 — 화면 첫 순간에
+          // 귀속된 에이전트가 미귀속으로 잘못 보인다
+          value={
+            binding.isAccountable === undefined
+              ? "확인 중…"
+              : binding.isAccountable
+                ? shortAddr(binding.owner)
+                : "없음"
+          }
           hint={
-            binding.isAccountable
-              ? "온체인에 새겨진 주인 (도장 인증)"
-              : "귀속 전에는 결제가 차단됩니다"
+            binding.isAccountable === undefined
+              ? "레지스트리 조회"
+              : binding.isAccountable
+                ? "온체인에 새겨진 주인 (도장 인증)"
+                : "귀속 전에는 결제가 차단됩니다"
           }
         />
       </div>
