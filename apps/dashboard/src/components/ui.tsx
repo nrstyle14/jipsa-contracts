@@ -19,9 +19,15 @@ export function shortAddr(a: string | undefined): string {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = "",
+  ...rest
+}: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`rounded-card border border-line bg-surface p-4 ${className}`}>{children}</div>
+    <div {...rest} className={`rounded-card border border-line bg-surface p-4 ${className}`}>
+      {children}
+    </div>
   );
 }
 

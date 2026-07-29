@@ -11,6 +11,7 @@ import {
   type JipsaPolicy,
 } from "@jipsa/delegation";
 import { useAgentBinding } from "../../hooks/useAgents.js";
+import { defaultLabel, useAgentLabels } from "../../hooks/useAgentLabels.js";
 import { useDelegationProvider } from "../../hooks/useDelegationProvider.js";
 import { Button, Card, Chip, shortAddr } from "../ui.js";
 
@@ -35,20 +36,26 @@ type Step = 1 | 2 | 3;
 export function RegisterWizard({
   onClose,
   onDelegation,
+  initialAgent,
 }: {
   onClose: () => void;
   onDelegation: (d: Delegation) => void;
+  /** 이미 귀속된 에이전트에 위임만 새로 발급할 때 미리 채운다 */
+  initialAgent?: Address;
 }) {
   const { address: owner } = useAccount();
   const provider = useDelegationProvider();
   const { writeContractAsync } = useWriteContract();
+  const { labelOf, setLabel } = useAgentLabels();
 
   const [step, setStep] = useState<Step>(1);
-  const [agentInput, setAgentInput] = useState("");
+  const [agentInput, setAgentInput] = useState<string>(initialAgent ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [policy, setPolicy] = useState(DEFAULTS);
   const [issued, setIssued] = useState<Delegation | undefined>();
+  /** 표시 이름 — 온체인에 없고 이 브라우저에만 저장된다 */
+  const [name, setName] = useState("");
 
   const agent = isAddress(agentInput) ? (agentInput as Address) : undefined;
   const binding = useAgentBinding(agent);
@@ -107,6 +114,7 @@ export function RegisterWizard({
         agent,
       };
       const d = await provider.grantDelegation(p);
+      if (name.trim()) setLabel(agent, name);
       setIssued(d);
       onDelegation(d);
     } catch (e) {
@@ -142,7 +150,9 @@ export function RegisterWizard({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
       <Card className="max-h-[90dvh] w-full max-w-xl overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold">에이전트 등록</h2>
+          <h2 className="text-base font-bold">
+            {initialAgent ? "위임 발급" : "에이전트 등록"}
+          </h2>
           <button className="text-muted hover:text-text" onClick={onClose}>
             닫기
           </button>
@@ -175,9 +185,25 @@ export function RegisterWizard({
             {agentInput && !agent && (
               <p className="text-[11px] text-[#E8A6A1]">주소 형식이 올바르지 않습니다.</p>
             )}
-            <Button variant="primary" disabled={!agent || busy} onClick={propose}>
-              {busy ? "서명 대기…" : "바인딩 제안 서명"}
-            </Button>
+            {acceptedByAgent ? (
+              <>
+                <p className="text-sm">
+                  <b>{labelOf(agent)}</b>{" "}
+                  <span className="num text-[11px] text-muted">{shortAddr(agent)}</span>
+                </p>
+                <p className="text-[11px] text-muted">
+                  이 에이전트는 이미 내게 귀속되어 있습니다. 바인딩 단계는 건너뛰고 위임만 새로
+                  발급합니다 — 다시 제안하면 <code>AgentAlreadyBound</code>로 실패합니다.
+                </p>
+                <Button variant="primary" onClick={() => setStep(3)}>
+                  다음: 위임 서명
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" disabled={!agent || busy} onClick={propose}>
+                {busy ? "서명 대기…" : "바인딩 제안 서명"}
+              </Button>
+            )}
           </div>
         )}
 
@@ -242,6 +268,17 @@ export function RegisterWizard({
                 onChange={(v) => setPolicy({ ...policy, validDays: v })}
               />
             </div>
+            <label className="block text-sm">
+              <span className="mb-1 block text-[11px] text-muted">
+                이름 (이 브라우저에만 저장 · 비우면 기본값)
+              </span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={agent ? defaultLabel(agent) : ""}
+                className="w-full rounded-btn border border-line bg-bg px-3 py-2 outline-none focus:border-blue"
+              />
+            </label>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -266,7 +303,9 @@ export function RegisterWizard({
           <div className="space-y-3 text-sm">
             <Chip tone="ok">위임 발급 완료</Chip>
             <div className="num space-y-1 text-[11px] text-muted">
-              <div>에이전트: {shortAddr(issued.delegate)}</div>
+              <div>
+                에이전트: {labelOf(issued.delegate)} ({shortAddr(issued.delegate)})
+              </div>
               <div>caveat: {issued.caveats.length}개</div>
               <div className="break-all">해시: {getDelegationHash(issued)}</div>
             </div>

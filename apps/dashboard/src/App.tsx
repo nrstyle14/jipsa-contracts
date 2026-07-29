@@ -23,6 +23,8 @@ export default function App() {
   const stored = useStoredDelegation();
   const [selected, setSelected] = useState<Address | undefined>();
   const [wizardOpen, setWizardOpen] = useState(false);
+  /** 이미 귀속된 에이전트에 위임만 재발급할 때 마법사에 넘긴다 */
+  const [issueFor, setIssueFor] = useState<Address | undefined>();
 
   // 첫 에이전트를 자동 선택
   useEffect(() => {
@@ -47,7 +49,10 @@ export default function App() {
               <Sidebar
                 selected={selected}
                 onSelect={setSelected}
-                onRegister={() => setWizardOpen(true)}
+                onRegister={() => {
+                  setIssueFor(undefined);
+                  setWizardOpen(true);
+                }}
               />
               {selected ? (
                 <AgentDetail
@@ -56,6 +61,10 @@ export default function App() {
                   onImport={stored.importJson}
                   onClearDelegation={stored.clear}
                   importError={stored.error}
+                  onIssue={() => {
+                    setIssueFor(selected);
+                    setWizardOpen(true);
+                  }}
                 />
               ) : (
                 <Card className="flex-1 text-sm text-muted">
@@ -70,6 +79,7 @@ export default function App() {
 
       {wizardOpen && (
         <RegisterWizard
+          initialAgent={issueFor}
           onClose={() => setWizardOpen(false)}
           onDelegation={(d) => {
             stored.save(d);

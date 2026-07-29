@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useAccountStatus } from "../../hooks/useAccountStatus.js";
 import { Button, Chip, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
 import { FaucetButton } from "./FaucetButton.js";
+import { WhyDelegationAccountModal } from "../onboarding/WhyDelegationAccount.js";
 
 export function Header() {
   const { address, isConnected } = useAccount();
@@ -10,9 +12,11 @@ export function Header() {
   const { disconnect } = useDisconnect();
   const s = useAccountStatus();
   const injected = connectors[0];
+  const [why, setWhy] = useState(false);
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-3">
+      {why && <WhyDelegationAccountModal onClose={() => setWhy(false)} />}
       <div className="flex items-center gap-2.5">
         <span className="grid h-7 w-7 place-items-center rounded-md bg-red text-sm font-black text-white">
           집
@@ -39,7 +43,13 @@ export function Header() {
           ) : s.isDelegationAccount ? (
             <Chip tone="ok">● 위임 계정 (7702)</Chip>
           ) : (
-            <Chip tone="red">● 위임 계정 아님</Chip>
+            <button
+              onClick={() => setWhy(true)}
+              title="왜 이 셋업이 필요한지 보기"
+              className="rounded-full focus:outline-none focus-visible:ring-1 focus-visible:ring-blue"
+            >
+              <Chip tone="red">● 위임 계정 아님 · 왜?</Chip>
+            </button>
           )}
 
           <Chip>{fmtTkrw(s.tkrwBalance)}</Chip>
