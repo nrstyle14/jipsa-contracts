@@ -6,6 +6,7 @@
   "scripts": {
     "grant": "tsx scripts/grant.ts",
     "agent": "tsx src/agent.ts",
+    "daemon": "tsx src/daemon.ts",
     "pay": "tsx scripts/pay.ts",
     "e2e": "tsx scripts/e2e.ts",
     "verify": "tsx scripts/verify-delegation.ts",

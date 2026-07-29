@@ -9,6 +9,8 @@ import type { Delegation } from "@jipsa/delegation";
 import { Button, Card, Chip, Gauge, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
 import { RevokeButton } from "./RevokeButton.js";
+import { AttackPanel } from "./AttackPanel.js";
+import { useDaemon } from "../../hooks/useDaemon.js";
 import { LiveFeed } from "../feed/LiveFeed.js";
 
 export function AgentDetail({
@@ -30,6 +32,7 @@ export function AgentDetail({
   const binding = useAgentBinding(agent);
   const { labelOf, setLabel } = useAgentLabels();
   const { isReadOnly } = useViewer();
+  const daemon = useDaemon();
   const status = useAccountStatus();
   const spend = useSpend(delegation);
   const p = spend.policy;
@@ -80,6 +83,8 @@ export function AgentDetail({
         />
       </div>
 
+      <DaemonLine daemon={daemon} />
+
       {/* ② 정책 패널 */}
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -88,7 +93,10 @@ export function AgentDetail({
             {spend.disabled === true && <Chip tone="red">철회됨</Chip>}
             {p?.verifiedRecipientOnly && <Chip tone="ok">검증 수신처 전용</Chip>}
             {delegation && boundToThisDelegation && spend.disabled === false && (
-              <RevokeButton delegation={delegation} />
+              <>
+                <AttackPanel daemon={daemon} delegation={delegation} />
+                <RevokeButton delegation={delegation} />
+              </>
             )}
           </div>
         </div>
@@ -209,6 +217,38 @@ function AgentTitle({
         이름 변경
       </button>
     </div>
+  );
+}
+
+/**
+ * 데몬 상태 줄.
+ *
+ * "동작 중" 배지가 무엇을 근거로 하는지 화면에 드러낸다 — 데몬이 꺼져 있으면
+ * 에이전트는 아무것도 하지 않으므로, 그 사실이 보여야 한다.
+ */
+function DaemonLine({ daemon }: { daemon: ReturnType<typeof useDaemon> }) {
+  if (!daemon.online) {
+    return (
+      <p className="text-[11px] text-muted">
+        에이전트 데몬이 꺼져 있습니다 — 결제는 일어나지 않습니다.{" "}
+        <code className="text-text">pnpm -F @jipsa/agent daemon</code>
+      </p>
+    );
+  }
+  const s = daemon.status;
+  const seconds = s ? Math.round(s.intervalMs / 1000) : 0;
+  return (
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+      <Chip tone="ok">데몬 연결됨</Chip>
+      <span>
+        {seconds}초 주기 · 결제 {s?.paymentsMade ?? 0}건
+      </span>
+      {s?.waitingForDelegation && <span className="text-[#E8A6A1]">위임 대기 중</span>}
+      {s?.rateLimited && (
+        <span className="text-[#E8A6A1]">RPC 한도 — 지금은 건너뛰고 잠시 후 다시 시도합니다</span>
+      )}
+      {s?.lastError && !s.rateLimited && <span className="text-[#E8A6A1]">{s.lastError}</span>}
+    </p>
   );
 }
 

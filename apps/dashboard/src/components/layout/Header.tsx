@@ -6,6 +6,7 @@ import { explorerAddress } from "../../config/chain.js";
 import { FaucetButton } from "./FaucetButton.js";
 import { WhyDelegationAccountModal } from "../onboarding/WhyDelegationAccount.js";
 import { DEMO_OWNER, useViewer } from "../../viewer.js";
+import { useUpId } from "../../hooks/useUpId.js";
 
 export function Header() {
   const { isConnected } = useAccount();
@@ -17,6 +18,8 @@ export function Header() {
   const s = useAccountStatus();
   const injected = connectors[0];
   const [why, setWhy] = useState(false);
+  // 이름이 등록된 주소면 축약 주소 대신 up.id 를 보여준다
+  const upId = useUpId(address);
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-3">
@@ -72,9 +75,10 @@ export function Header() {
               href={explorerAddress(address!)}
               target="_blank"
               rel="noreferrer"
-              className="num text-xs text-blue hover:underline"
+              className={`text-xs text-blue hover:underline ${upId ? "" : "num"}`}
+              title={address}
             >
-              {shortAddr(address)}
+              {upId ?? shortAddr(address)}
             </a>
             {isConnected && <Button onClick={() => disconnect()}>연결 해제</Button>}
           </>

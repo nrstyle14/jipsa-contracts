@@ -61,10 +61,6 @@ export default function App() {
                 selected={selected}
                 onSelect={setSelected}
                 delegation={stored.delegation}
-                onRegister={() => {
-                  setIssueFor(undefined);
-                  setWizardOpen(true);
-                }}
               />
               {selected ? (
                 <AgentDetail
