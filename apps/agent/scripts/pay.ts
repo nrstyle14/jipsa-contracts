@@ -116,11 +116,27 @@ async function main() {
    * 초기화하므로 이후 건은 더 싸다 → 첫 추정값 + 20% 여유면 안전하다.
    */
   const probeData = redeemCalldata(d, cli.to as Address, cli.amount);
-  const estimated = await publicClient.estimateGas({
-    account: account.address,
-    to: DELEGATION_MANAGER,
-    data: probeData,
-  });
+  let estimated: bigint;
+  try {
+    estimated = await publicClient.estimateGas({
+      account: account.address,
+      to: DELEGATION_MANAGER,
+      data: probeData,
+    });
+  } catch (e) {
+    // ⚠️ 가스 추정 실패도 정책 차단일 수 있다 (철회된 위임·한도 초과 등).
+    //    그대로 던지면 "Execution reverted for an unknown reason" 만 보여 원인을
+    //    찾을 수 없다 — 결제 실패와 같은 수준으로 사유를 디코딩해 알려준다.
+    const decoded = decodeRevertFromError(e);
+    throw new Error(
+      decoded
+        ? `이 위임으로는 결제할 수 없습니다 — ${decoded.label ?? decoded.reason}` +
+          (decoded.reason === "CannotUseADisabledDelegation"
+            ? "\n  되살리려면: pnpm -F @jipsa/agent agent -- --enable"
+            : "")
+        : `가스 추정이 실패했습니다: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`,
+    );
+  }
   const gas = (estimated * 12n) / 10n;
   console.log(`  가스      : ${estimated} 추정 → ${gas} 사용 (1회만 추정)`);
   console.log("");
@@ -199,6 +215,10 @@ async function replayReason(
 
 main().catch((e: unknown) => {
   console.error("");
-  console.error("중단:", e instanceof Error ? e.message.split("\n")[0] : e);
+  // viem 오류는 장문이라 첫 줄만 쓰던 것을, 우리가 만든 여러 줄 안내(예: 되살리기 명령)가
+  // 함께 잘리는 문제가 있었다 → 짧은 메시지는 전부 보여주고 장문만 자른다.
+  const msg = e instanceof Error ? e.message : String(e);
+  const lines = msg.split("\n");
+  console.error("중단:", lines.length <= 6 ? msg : lines[0]);
   process.exit(1);
 });
