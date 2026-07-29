@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { Address } from "viem";
+import { DEMO } from "@jipsa/delegation";
 
 const KEY = "jipsa.agentLabels.v1";
 
@@ -68,7 +69,13 @@ export function useAgentLabels() {
   return { labelOf, setLabel: setAgentLabel };
 }
 
-/** 이름을 정하지 않았을 때 — 주소 뒷자리로 서로 구분되게 한다 */
+/**
+ * 이름을 정하지 않았을 때 — 주소 뒷자리로 서로 구분되게 한다.
+ *
+ * 데모 에이전트만 예외로 "리서치봇"이다. MVP 시나리오 Act 1의 대본이
+ * "대시보드에 리서치봇 카드 생성"이라 화면 문구가 대본과 어긋나면 안 된다.
+ */
 export function defaultLabel(agent: Address): string {
+  if (agent.toLowerCase() === DEMO.agent.toLowerCase()) return "리서치봇";
   return `에이전트 ${agent.slice(-4)}`;
 }
