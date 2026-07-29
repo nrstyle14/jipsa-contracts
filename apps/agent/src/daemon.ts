@@ -42,8 +42,21 @@ import { optionalAddress, optionalString } from "./env.js";
 
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** 대시보드(vite dev)에서만 제어를 허용한다 */
-const ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+/**
+ * 제어를 허용할 대시보드 origin.
+ *
+ * 기본은 로컬 vite dev 두 개뿐이다. 배포된 대시보드(예: Vercel)에서 로컬 데몬을 부르려면
+ * `DASHBOARD_ORIGIN`에 콤마로 나열한다 — 그때는 HTTPS 터널이 필요하다(혼합 콘텐츠 차단).
+ *
+ * ⚠️ 아무 origin이나 열지 말 것. /inject 는 실제 tx를 브로드캐스트한다. 피해는 caveat
+ *    안으로 제한되지만(건당 50 · 일간 500), 남이 마음대로 트리거할 이유는 없다.
+ */
+const ALLOWED_ORIGINS = (
+  optionalString("DASHBOARD_ORIGIN") ?? "http://localhost:5173,http://127.0.0.1:5173"
+)
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 /**
  * 인젝션 대본 — 대시보드 팝업이 이 문구를 그대로 보여준다.
@@ -272,6 +285,10 @@ function cors(req: IncomingMessage, res: ServerResponse): void {
     res.setHeader("access-control-allow-origin", origin);
     res.setHeader("access-control-allow-headers", "content-type");
     res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+    // Chrome의 Private Network Access — 공개 페이지가 사설망 주소를 부를 때 요구한다
+    if (req.headers["access-control-request-private-network"] === "true") {
+      res.setHeader("access-control-allow-private-network", "true");
+    }
   }
 }
 

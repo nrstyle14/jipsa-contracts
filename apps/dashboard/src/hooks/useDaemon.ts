@@ -11,7 +11,25 @@ import type { Address, Hex } from "viem";
  * ⚠️ 데몬이 꺼져 있는 것은 오류가 아니다. 위임 발급만 보여주는 장면에서는 데몬이 없어도
  *    되므로, 연결 실패는 조용히 `offline`으로 다룬다.
  */
-const DEFAULT_BASE = "http://127.0.0.1:8787";
+
+/**
+ * 데몬 주소.
+ *
+ * 데몬은 **에이전트 개인키를 들고 있어 절대 배포할 수 없다.** 그래서 배포된 대시보드
+ * (Vercel 등)에는 부를 상대가 없다 — 죽은 주소를 2초마다 두드리는 것은 낭비이므로
+ * **localhost에서 열었을 때만 기본 활성**이다.
+ *
+ * 원격에서 데몬을 붙이려면 `VITE_DAEMON_URL`에 **HTTPS 터널 주소**를 넣는다
+ * (ngrok · cloudflared). HTTPS 페이지에서 `http://…`를 부르면 혼합 콘텐츠로 막히고,
+ * 사설망 주소는 Chrome의 Private Network Access 프리플라이트도 통과해야 한다.
+ * `VITE_DAEMON_URL=""` 로 두면 기능을 완전히 끈다.
+ */
+function defaultBase(): string {
+  const configured = import.meta.env.VITE_DAEMON_URL as string | undefined;
+  if (configured !== undefined) return configured; // 빈 문자열이면 비활성
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" ? "http://127.0.0.1:8787" : "";
+}
 
 export interface DaemonBlocked {
   hash: Hex;
@@ -49,12 +67,13 @@ export interface Daemon {
   busy: boolean;
 }
 
-export function useDaemon(baseUrl: string = DEFAULT_BASE): Daemon {
+export function useDaemon(baseUrl: string = defaultBase()): Daemon {
   const [status, setStatus] = useState<DaemonStatus | undefined>();
   const [online, setOnline] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!baseUrl) return; // 배포 환경 — 부를 데몬이 없다
     let stop = false;
     const tick = async () => {
       try {
@@ -82,6 +101,7 @@ export function useDaemon(baseUrl: string = DEFAULT_BASE): Daemon {
 
   const post = useCallback(
     async (path: string) => {
+      if (!baseUrl) return { error: "이 환경에는 에이전트 데몬이 없습니다 (로컬에서 실행하세요)" };
       setBusy(true);
       try {
         const r = await fetch(`${baseUrl}${path}`, { method: "POST" });
