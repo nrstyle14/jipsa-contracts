@@ -2,6 +2,8 @@ cache/
 out/
 broadcast/
 .env
+.env.*
+!.env.example
 .DS_Store
 
 # 작업 지시서·원페이저 등 대외 비공개 문서 (공개 원격이라 커밋하지 않는다)

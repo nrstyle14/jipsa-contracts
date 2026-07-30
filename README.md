@@ -151,6 +151,8 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 ## 시작하기
 
 ```bash
+cp .env.example .env                     # 필요한 키·기본값이 주석으로 들어 있다
+
 # lib/forge-std · lib/openzeppelin-contracts · lib/delegation-framework(v1.3.0)
 # delegation-framework 가 없으면 forge build 부터 실패한다 — 계정·매니저를 여기서 가져온다
 git submodule update --init --recursive
@@ -164,16 +166,6 @@ forge test -vvv                          # 55개 통과 · 9개는 포크 전용
 #    한 번 실패하면 잠시 뒤 다시 돌린다 — 두 번째부터는 캐시가 받쳐준다.
 FOUNDRY_PROFILE=fork forge test
 
-# 배포 + verify (한 번에)
-# PRIVATE_KEY는 .env에 두면 foundry가 자동으로 읽는다 (.env는 gitignore 처리됨).
-# --verify를 붙이면 생성자 인자를 broadcast 기록에서 가져와 자동 처리한다.
-# 익스플로러는 Blockscout v11.1.3이며 API 키가 필요 없다.
-forge script script/Deploy.s.sol \
-  --rpc-url https://sepolia-rpc.giwa.io \
-  --broadcast \
-  --verify --verifier blockscout \
-  --verifier-url https://sepolia-explorer.giwa.io/api/
-
 # 개별 verify가 필요한 경우 (예: 데모 중 생성한 PolicyAccount)
 forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
   --chain-id 91342 \
@@ -183,8 +175,8 @@ forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
     <OWNER> <AGENT> <REGISTRY> <GATE> <TOKEN> '(100000000000,1000000000,10000000000,<VALID_UNTIL>,false)')
 ```
 
-이 스크립트가 배포하는 세 컨트랙트의 실측 gas는 합쳐 **2,487,474**다
-(tKRW 1,404,602 · Gate 498,799 · Registry 584,073 — `broadcast/` 영수증 기준).
+**배포는 대개 할 필요가 없다** — 위 "배포 주소" 표의 스택이 이미 살아 있다. 새로 올려야
+하면 아래 [ERC-7710 위임 스택 → 배포](#배포)로 간다.
 가스가 없으면 https://docs.giwa.io/get-started/faucets 에서 받는다.
 
 ## ERC-7710 위임 스택
@@ -224,8 +216,20 @@ MetaMask delegation-framework **감사 태그 v1.3.0**을 그대로 배포하고
 ### 배포
 
 ```bash
-forge script script/DeployErc7710.s.sol --rpc-url giwa_sepolia --broadcast
+# ⚠️ script/Deploy.s.sol 이 아니다 — 그건 플랜 B(PolicyAccount) 스택이며 데모에 쓰지 않는다.
+# PRIVATE_KEY는 .env에 두면 foundry가 자동으로 읽는다 (.env는 gitignore 처리됨).
+# --verify를 붙이면 생성자 인자를 broadcast 기록에서 가져와 자동 처리한다.
+# 익스플로러는 Blockscout v11.1.3이며 API 키가 필요 없다.
+forge script script/DeployErc7710.s.sol \
+  --rpc-url giwa_sepolia \
+  --broadcast \
+  --verify --verifier blockscout \
+  --verifier-url https://sepolia-explorer.giwa.io/api/
 ```
+
+12건 합계 **10,841,972 gas** (내역은 위 "배포 주소" 절). 플랜 B 스택만 따로 올릴 일이
+있으면 `script/Deploy.s.sol` 이고 tKRW·Gate·Registry 세 개뿐이라 **2,487,474** 다
+(1,404,602 · 498,799 · 584,073).
 
 이미 배포된 것을 재사용하려면 `TOKEN_ADDRESS` / `GATE_ADDRESS` / `REGISTRY_ADDRESS`를 넘긴다.
 EntryPoint는 v0.7(`0x0000000071727De22E5E9d8BAf0edAc6f37da032`)을 쓴다 —
@@ -330,7 +334,9 @@ MetaMask 는 도메인 `DelegationManager` + `primaryType: Delegation` 조합을
 ### 대시보드·에이전트 실행
 
 ```bash
-cp .env.example .env             # 필요한 키·기본값 설명이 주석으로 들어 있다
+# 루트 .env 는 "시작하기"에서 이미 복사했다. 대시보드는 템플릿이 따로다 —
+# Vite 는 envDir 기본값이 apps/dashboard 라서 루트 .env 를 읽지 않는다.
+cp apps/dashboard/.env.example apps/dashboard/.env.local   # 전부 선택값이라 생략 가능
 pnpm install
 pnpm -r typecheck
 pnpm -F @jipsa/delegation test   # 26개 통과 · 5개는 RPC 필요라 skip (총 31개)
@@ -353,7 +359,7 @@ pnpm -F @jipsa/agent verify         # 리딤 가능한지 시뮬레이션으로 
 pnpm -F @jipsa/agent pay -- --count 3 --interval 2000
 pnpm -F @jipsa/agent agent -- --scenario attack   # 인젝션 → 이중 차단
 pnpm -F @jipsa/agent agent -- --enable            # 철회한 위임 되살리기
-pnpm -F @jipsa/agent agent -- --mode claude       # 작업 판단을 실제 LLM 이 수행
+pnpm -F @jipsa/agent agent -- --mode claude       # 작업당 지급액을 LLM 이 정함
 pnpm -F @jipsa/agent e2e            # 전건 통과가 촬영 가능 판정 기준 (N/N 으로 출력)
 ```
 
@@ -384,13 +390,15 @@ pnpm -F @jipsa/agent e2e            # 전건 통과가 촬영 가능 판정 기�
 없고, 배포된 대시보드에는 부를 상대가 없다 — 그래서 데몬 연동은 `localhost` 에서 열었을
 때만 기본 활성이다. 대시보드만 배포하면 조회·위임 발급은 되고 에이전트 제어만 빠진다.
 
-원격에서 붙이려면 `VITE_DAEMON_URL` 에 **HTTPS 터널** 주소(ngrok · cloudflared)를 넣는다.
+원격에서 붙이려면 `apps/dashboard/.env.local` 의 `VITE_DAEMON_URL` 에
+**HTTPS 터널** 주소(ngrok · cloudflared)를 넣는다.
 HTTPS 페이지에서 `http://` 는 혼합 콘텐츠로 막히고, 사설망 주소는 Chrome 의 Private
 Network Access 프리플라이트도 통과해야 한다.
 
 > ⚠️ **터널로 노출하면 `DAEMON_TOKEN` 을 반드시 설정할 것.** CORS 는 브라우저만 막는다 —
 > `curl` 은 그냥 통과하므로 토큰이 없으면 누구나 `/inject` 를 호출해 남의 데몬에
-> 인젝션을 밀어넣을 수 있다. 대시보드에는 같은 값을 `VITE_DAEMON_TOKEN` 으로 넣는다.
+> 인젝션을 밀어넣을 수 있다. 대시보드에는 같은 값을 `apps/dashboard/.env.local` 의
+> `VITE_DAEMON_TOKEN` 으로 넣는다.
 
 ### 격리 모델의 차이 (중요)
 
