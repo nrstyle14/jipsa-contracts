@@ -40,6 +40,10 @@ test/
 ```
 
 컨트랙트 밖은 pnpm 워크스페이스다. 대시보드·에이전트는 공유 패키지 하나만 본다.
+각 패키지에 자체 README가 있다 — [`@jipsa/delegation`](packages/delegation/README.md)은
+caveat terms 인코딩이 enforcer마다 다르고 위임 해시가 EIP-712 typed-data 해시가 아닌
+구조체 해시라는 점을, [`@jipsa/dashboard`](apps/dashboard/README.md)는 화면 구성과
+Rabby·7702 제약을 다룬다.
 
 ```
 packages/delegation/src/          # 공유: 주소·ABI·caveat 인코딩·EIP-712·revert 디코딩
