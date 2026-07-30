@@ -5,6 +5,7 @@ import { Button, Chip, fmtTkrw, shortAddr } from "../ui.js";
 import { explorerAddress } from "../../config/chain.js";
 import { FaucetButton } from "./FaucetButton.js";
 import { WalletPicker } from "./WalletPicker.js";
+import { Logo } from "./Logo.js";
 import { giwaSepolia } from "../../config/chain.js";
 import { WhyDelegationAccountModal } from "../onboarding/WhyDelegationAccount.js";
 import { DEMO_OWNER, useViewer } from "../../viewer.js";
@@ -25,9 +26,7 @@ export function Header() {
     <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-3">
       {why && <WhyDelegationAccountModal onClose={() => setWhy(false)} />}
       <div className="flex items-center gap-2.5">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-red text-sm font-black text-white">
-          집
-        </span>
+        <Logo className="h-7 w-7 text-red" />
         <span className="text-base font-bold tracking-tight">JIPSA 관제</span>
       </div>
 
