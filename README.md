@@ -330,6 +330,7 @@ MetaMask 는 도메인 `DelegationManager` + `primaryType: Delegation` 조합을
 ### 대시보드·에이전트 실행
 
 ```bash
+cp .env.example .env             # 필요한 키·기본값 설명이 주석으로 들어 있다
 pnpm install
 pnpm -r typecheck
 pnpm -F @jipsa/delegation test   # 26개 통과 · 5개는 RPC 필요라 skip (총 31개)
@@ -352,6 +353,7 @@ pnpm -F @jipsa/agent verify         # 리딤 가능한지 시뮬레이션으로 
 pnpm -F @jipsa/agent pay -- --count 3 --interval 2000
 pnpm -F @jipsa/agent agent -- --scenario attack   # 인젝션 → 이중 차단
 pnpm -F @jipsa/agent agent -- --enable            # 철회한 위임 되살리기
+pnpm -F @jipsa/agent agent -- --mode claude       # 작업 판단을 실제 LLM 이 수행
 pnpm -F @jipsa/agent e2e            # 전건 통과가 촬영 가능 판정 기준 (N/N 으로 출력)
 ```
 
@@ -363,6 +365,32 @@ pnpm -F @jipsa/agent e2e            # 전건 통과가 촬영 가능 판정 기�
 > ⚠️ **e2e 를 연속 실행하지 말 것.** 한 번에 온체인 호출이 40건 이상이고 Dojang 검증처럼
 > 무거운 `eth_call` 이 섞여 있어, 쉬지 않고 3회 돌리면 2회차부터 `over rate limit` 으로
 > 실패한다(회복 1~2분). 실행 사이에 1~2분을 두거나 전용 RPC(`RPC_URL`)를 쓴다.
+
+#### 에이전트가 실제로 판단하게 하기 (`--mode claude`)
+
+기본값은 스크립트 모드다 — 작업마다 지급액이 코드에 박혀 있다. `--mode claude` 를 주면
+**작업당 지급액을 LLM 이 정한다** (`ANTHROPIC_API_KEY` 필요, 모델은 `CLAUDE_MODEL`,
+기본 `claude-sonnet-5`).
+
+온체인 동작은 두 모드가 같다 — enforcer 는 누가 결정했는지 모르고 금액·대상·도장만 본다.
+그래서 **인젝션 시연에서 이 모드가 의미를 갖는다**: 스크립트 모드의 "공격"은 우리가 짠
+분기지만, claude 모드는 `injection.txt` 를 외부 입력으로 LLM 에 먹여
+(`askClaudeUnderInjection`) 실제로 판단을 흔들고, 그 결과가 컨트랙트에서 막히는 것을
+보여준다. 판단은 속을 수 있어도 caveat 은 속지 않는다는 것이 요지다.
+
+#### 데몬은 배포할 수 없다
+
+데몬은 **에이전트 개인키를 들고** 결제 tx 를 직접 서명한다. Vercel 같은 곳에 올릴 수
+없고, 배포된 대시보드에는 부를 상대가 없다 — 그래서 데몬 연동은 `localhost` 에서 열었을
+때만 기본 활성이다. 대시보드만 배포하면 조회·위임 발급은 되고 에이전트 제어만 빠진다.
+
+원격에서 붙이려면 `VITE_DAEMON_URL` 에 **HTTPS 터널** 주소(ngrok · cloudflared)를 넣는다.
+HTTPS 페이지에서 `http://` 는 혼합 콘텐츠로 막히고, 사설망 주소는 Chrome 의 Private
+Network Access 프리플라이트도 통과해야 한다.
+
+> ⚠️ **터널로 노출하면 `DAEMON_TOKEN` 을 반드시 설정할 것.** CORS 는 브라우저만 막는다 —
+> `curl` 은 그냥 통과하므로 토큰이 없으면 누구나 `/inject` 를 호출해 남의 데몬에
+> 인젝션을 밀어넣을 수 있다. 대시보드에는 같은 값을 `VITE_DAEMON_TOKEN` 으로 넣는다.
 
 ### 격리 모델의 차이 (중요)
 
