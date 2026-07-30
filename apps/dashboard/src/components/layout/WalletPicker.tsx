@@ -29,7 +29,7 @@ export function WalletPicker({ compact = false }: { compact?: boolean }) {
         disabled={!only || isPending}
         onClick={() => only && connect({ connector: only })}
       >
-        {isPending ? "연결 중…" : only ? `${only.name} 연결` : "지갑 없음"}
+        {isPending ? "연결 중…" : only ? `${displayName(only)} 연결` : "지갑 없음"}
       </Button>
     );
   }
@@ -56,13 +56,24 @@ export function WalletPicker({ compact = false }: { compact?: boolean }) {
         >
           <span className="inline-flex items-center gap-1.5">
             {c.icon && <img src={c.icon} alt="" className="h-4 w-4 rounded" />}
-            {c.name}
+            {displayName(c)}
           </span>
         </Button>
       ))}
       {compact && <Button onClick={() => setOpen(false)}>취소</Button>}
     </div>
   );
+}
+
+/**
+ * 표시 이름.
+ *
+ * 일반 `injected` 커넥터의 `name` 은 "Injected" 인데, 화면에 그대로 쓰면 어느 지갑인지
+ * 알 수 없는 라벨이 된다 (6963 을 announce 하지 않는 지갑이나 확장이 없는 브라우저에서
+ * 이 폴백이 유일한 항목이 된다). 사람이 읽는 말로 바꾼다.
+ */
+function displayName(c: Connector): string {
+  return c.id === "injected" ? "브라우저 지갑" : c.name;
 }
 
 /**

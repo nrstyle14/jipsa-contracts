@@ -294,7 +294,7 @@ export function RegisterWizard({
               주인 지갑에 있고 지출 권한만 위임됩니다.
             </p>
             <Button variant="primary" disabled={busy || !provider} onClick={sign}>
-              {busy ? "MetaMask 서명 대기…" : "위임 서명"}
+              {busy ? "지갑 서명 대기…" : "위임 서명"}
             </Button>
           </div>
         )}
