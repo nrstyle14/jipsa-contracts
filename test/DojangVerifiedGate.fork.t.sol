@@ -6,8 +6,7 @@ import {DojangVerifiedGate} from "../src/gates/DojangVerifiedGate.sol";
 
 /// @notice GIWA Sepolia 포크 테스트 — 실제 DojangScroll 도장을 조회한다.
 /// 실행:
-///   forge test --match-path test/DojangVerifiedGate.fork.t.sol \
-///     --fork-url https://sepolia-rpc.giwa.io
+///   FOUNDRY_PROFILE=fork forge test --match-path test/DojangVerifiedGate.fork.t.sol
 contract DojangVerifiedGateForkTest is ForkTestBase {
     function test_Fork_VerifiedSubjectPassesGate() public {
         if (!_onGiwaFork()) return;

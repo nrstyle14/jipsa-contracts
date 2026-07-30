@@ -12,8 +12,7 @@ import {PolicyAccount} from "../src/PolicyAccount.sol";
 ///         정책 산술(상한/일간 윈도우)은 PolicyAccount.t.sol에서 다루고,
 ///         여기서는 실제 게이트에 의존하는 경로만 확인한다.
 /// 실행:
-///   forge test --match-path test/PolicyAccount.fork.t.sol \
-///     --fork-url https://sepolia-rpc.giwa.io
+///   FOUNDRY_PROFILE=fork forge test --match-path test/PolicyAccount.fork.t.sol
 contract PolicyAccountForkTest is ForkTestBase {
     JipsaSettlementToken token;
     DojangVerifiedGate gate;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {Test} from "forge-std/Test.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ModeLib} from "@erc7579/lib/ModeLib.sol";
 import {ExecutionLib} from "@erc7579/lib/ExecutionLib.sol";
@@ -17,20 +16,18 @@ import {DojangVerifiedGate} from "../../src/gates/DojangVerifiedGate.sol";
 import {OwnerBindingRegistry} from "../../src/OwnerBindingRegistry.sol";
 import {DojangCaveatEnforcer} from "../../src/enforcers/DojangCaveatEnforcer.sol";
 import {JipsaPerTxCapEnforcer} from "../../src/enforcers/JipsaPerTxCapEnforcer.sol";
+import {ForkTestBase} from "../ForkTestBase.sol";
 
 /// @notice GIWA Sepolia에 **실제 배포된 주소**와 **실도장 주인**으로 도는 축약 사이클.
 ///         지시서 C-5-5에 해당한다.
 ///
 /// 실행:
-///   forge test --match-path test/erc7710/LiveCycle.fork.t.sol \
-///     --fork-url https://sepolia-rpc.giwa.io
+///   FOUNDRY_PROFILE=fork forge test --match-path test/erc7710/LiveCycle.fork.t.sol
 ///
 /// @dev 주인 EOA는 실체인에서 이미 7702 코드를 보유하고 도장도 받은 상태다.
 ///      따라서 vm.etch도 mock도 쓰지 않는다 — 포크가 그 상태를 그대로 물려받는다.
 ///      위임 서명에는 .env의 OWNER_PRIVATE_KEY가 필요하다. 없으면 skip한다.
-contract LiveCycleForkTest is Test {
-    uint256 internal constant GIWA_SEPOLIA_CHAIN_ID = 91342;
-
+contract LiveCycleForkTest is ForkTestBase {
     // GIWA Sepolia 실배포 주소
     JipsaSettlementToken constant TOKEN = JipsaSettlementToken(0x1E743C166FaeeEe5b840A471a6760535AE4076B0);
     DojangVerifiedGate constant GATE = DojangVerifiedGate(0xD13aE574E53F2D14F71411383CcEeC9c16529fc3);
@@ -56,11 +53,10 @@ contract LiveCycleForkTest is Test {
     uint256 ownerPk;
 
     /// @return 포크 + 주인 키가 모두 준비됐으면 true
+    /// @dev 포크 판별과 블록 하한 검사는 `ForkTestBase._onGiwaFork()`에 맡긴다 —
+    ///      이 테스트가 바로 낮은 블록에서 깨졌던 대상이라 가드를 공유해야 한다.
     function _ready() internal returns (bool) {
-        if (block.chainid != GIWA_SEPOLIA_CHAIN_ID) {
-            vm.skip(true);
-            return false;
-        }
+        if (!_onGiwaFork()) return false;
         ownerPk = vm.envOr("OWNER_PRIVATE_KEY", uint256(0));
         if (ownerPk == 0 || vm.addr(ownerPk) != OWNER) {
             vm.skip(true);

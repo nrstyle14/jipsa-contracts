@@ -7,6 +7,18 @@ evm_version = "prague"
 optimizer = true
 optimizer_runs = 200
 
+# 포크 테스트 프로파일 — `FOUNDRY_PROFILE=fork forge test`
+#
+# 블록을 여기 박아 두는 이유: 이 숫자가 README 에만 있던 동안 데모 셋업(주인 도장 발급·
+# 7702 코드 심기)보다 앞선 값이 적혀 있었고, 코드가 참조하지 않으니 아무도 잡아주지
+# 않았다. 이제 명령에서 숫자가 빠지므로 옮겨 적다 틀릴 여지가 없다.
+#
+# 갱신할 때: 공개 RPC 가 이 블록 상태를 프루닝하면 실패한다. 더 최근 블록으로 올리고
+# `ForkTestBase.MIN_FORK_BLOCK` 이상인지만 지키면 된다.
+[profile.fork]
+eth_rpc_url = "https://sepolia-rpc.giwa.io"
+fork_block_number = 32000000
+
 [rpc_endpoints]
 giwa_sepolia = "https://sepolia-rpc.giwa.io"
 giwa_sepolia_flashblocks = "https://sepolia-rpc-flashblocks.giwa.io"

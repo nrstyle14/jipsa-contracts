@@ -27,7 +27,7 @@ test/
 ├── JipsaSettlementToken.t.sol    # 토큰 (역할, faucet 쿨다운, pause, permit)
 ├── OwnerBindingRegistry.t.sol    # 바인딩 (프런트러닝 차단, 제안 취소)
 ├── PolicyAccount.t.sol           # 지출 정책 단위 테스트
-├── ForkTestBase.sol              # 포크 테스트 공통 상수·가드
+├── ForkTestBase.sol              # 포크 공통 상수 + 블록 하한 가드 (MIN_FORK_BLOCK)
 ├── DojangVerifiedGate.fork.t.sol # 실제 DojangScroll 조회 검증
 ├── PolicyAccount.fork.t.sol      # 실제 도장으로 바인딩→지출 통합 검증
 └── erc7710/
@@ -157,14 +157,12 @@ git submodule update --init --recursive
 forge build
 forge test -vvv                          # 55개 통과 · 9개는 포크 전용이라 skip (총 64개)
 
-# DojangScroll 실제 조회를 검증하는 포크 테스트 포함 (64개 전부 통과해야 한다)
-# 블록을 고정하면 Foundry가 포크 상태를 캐시한다 — 재실행이 빨라지고
-# 공개 RPC의 rate limit(HTTP 429)에 걸리지 않는다. 고정 없이 반복 실행하면 429로 실패할 수 있다.
-# ⚠️ 블록을 임의로 낮추지 말 것 — 데모 셋업(주인 도장 발급·7702 코드 심기)보다 앞선
-#    블록에서는 LiveCycle.fork.t.sol 이 실패한다. 31869189 는 셋업 이전이라 쓸 수 없다.
+# DojangScroll 실제 조회를 검증하는 포크 테스트까지 포함 — 64개 전부 통과해야 한다.
+# RPC와 고정 블록은 foundry.toml 의 [profile.fork] 에 박혀 있다 (명령에 숫자를 쓰지 않는다).
+# 블록을 고정하면 Foundry가 포크 상태를 캐시해 재실행이 빨라지고 rate limit 을 피한다.
 # ⚠️ 새 블록으로 처음 돌리면 캐시가 비어 요청이 몰려 rate limit 에 걸릴 수 있다.
 #    한 번 실패하면 잠시 뒤 다시 돌린다 — 두 번째부터는 캐시가 받쳐준다.
-forge test --fork-url https://sepolia-rpc.giwa.io --fork-block-number 32000000
+FOUNDRY_PROFILE=fork forge test
 
 # 배포 + verify (한 번에)
 # PRIVATE_KEY는 .env에 두면 foundry가 자동으로 읽는다 (.env는 gitignore 처리됨).
