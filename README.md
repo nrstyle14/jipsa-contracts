@@ -280,7 +280,7 @@ forge script script/DemoRedeem.s.sol --rpc-url giwa_sepolia --broadcast
 forge script script/DemoRedeem.s.sol --sig "overCap()" --rpc-url giwa_sepolia
 ```
 
-GIWA Sepolia 실행 결과 (2026-07-28):
+GIWA Sepolia 실행 결과 :
 
 | 단계 | gas | 결과 |
 |---|---|---|
@@ -292,7 +292,7 @@ GIWA Sepolia 실행 결과 (2026-07-28):
 
 ### 주인 지갑 — Rabby 를 쓴다
 
-주인이 하는 동작 중 **위임 EIP-712 서명만 지갑이 갈린다** (2026-07-30 실측).
+주인이 하는 동작 중 **위임 EIP-712 서명만 지갑이 갈린다** .
 
 | 주인이 하는 동작 | MetaMask | Rabby |
 |---|---|---|
@@ -305,7 +305,7 @@ MetaMask 는 도메인 `DelegationManager` + `primaryType: Delegation` 조합을
 `External signature requests cannot sign delegations for internal accounts` (-32603) 로
 거부한다. 자사 스마트 계정의 ERC-7715 `wallet_grantPermissions` 로만 이 흐름을 연다.
 
-판단 자체는 타당하다 — 위임 서명은 지출 권한을 넘기는 행위이고, 일반 서명 팝업으로
+위임 서명은 지출 권한을 넘기는 행위이고, 일반 서명 팝업으로
 아무 dapp 이나 받으면 위험하다. JIPSA 가 지적하는 문제와 같은 문제의식이며, 우리는 그
 권한을 컨트랙트 레벨 정책으로 묶어 해결한다. 그래서 **대시보드는 MetaMask 를 연결
 목록에서 제외**한다 (`window.ethereum` 폴백까지 함께 막는다).
@@ -358,11 +358,8 @@ enforcer가 곧 금고 칸막이다. 데모는 한도를 타이트하게 설정�
 
 `PolicyAccount`는 플랜 B로 `main`에 유지된다.
 
-## 알려진 한계 (2026-07-30)
+## 한계
 
-- **up.id 이름 표기 없음.** `useUpId` 는 이더리움 메인넷 ENS + CCIP-Read
-  (`https://id.giwa.io/gateway/…`) 로 실제 해석하지만, 데모 EOA 에는 등록된 이름이 없어
-  주소 축약으로 폴백된다. up.id 는 지갑에 묶인 SBT 라 테스트넷 EOA 로 돌릴 수 없다.
 - **가맹처 API 실호출 없음.** 에이전트는 작업 큐를 처리하는 척하고 결제만 실제로 한다.
 - **대시보드는 위임을 한 장만 보관한다.** 에이전트를 둘 등록하면 한 번에 하나만 온전히
   보인다 (멀티 위임 관리 UI 는 범위에서 제외).
