@@ -11,6 +11,7 @@ import {
   type JipsaPolicy,
 } from "@jipsa/delegation";
 import { useAgentBinding } from "../../hooks/useAgents.js";
+import { WhyRabbyButton } from "./WhyRabby.js";
 import { defaultLabel, useAgentLabels } from "../../hooks/useAgentLabels.js";
 import { useDelegationProvider } from "../../hooks/useDelegationProvider.js";
 import { Button, Card, Chip, shortAddr } from "../ui.js";
@@ -292,6 +293,10 @@ export function RegisterWizard({
             <p className="text-[11px] text-muted">
               온체인 트랜잭션이 아니라 <b>EIP-712 서명</b>입니다. 예치도 없습니다 — 자금은 계속
               주인 지갑에 있고 지출 권한만 위임됩니다.
+            </p>
+            <p className="text-[11px] text-muted">
+              <b className="text-text">Rabby</b>로 서명하세요 — MetaMask는 이 요청을 거부합니다.{" "}
+              <WhyRabbyButton />
             </p>
             <Button variant="primary" disabled={busy || !provider} onClick={sign}>
               {busy ? "지갑 서명 대기…" : "위임 서명"}

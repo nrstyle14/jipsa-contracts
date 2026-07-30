@@ -14,4 +14,5 @@ dist/
 
 # 서명된 위임 산출물 (에이전트에 전달하는 것이며 커밋 대상 아님)
 delegation.json
+delegation.json.*
 e2e-delegation.json
