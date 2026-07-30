@@ -6,7 +6,7 @@ import { Button, Card } from "../ui.js";
  *
  * 심사·시연에서 반드시 나오는 질문 셋을 한 화면에 담는다.
  *  ① 왜 7702를 골랐나 (트레이드오프까지)
- *  ② 기와 월렛에서는 어떻게 되나
+ *  ② 지갑이 열어주면 클릭 한 번 (위임 서명은 지갑이 갈린다)
  *  ③ ERC-4337로 하면 이 단계가 없어지는데 왜 안 했나
  *
  * ⚠️ 여기 담긴 사실은 소스·온체인으로 확인한 것만 쓴다. 특히
@@ -60,17 +60,18 @@ export function WhyDelegationAccountModal({ onClose }: { onClose: () => void }) 
           </Tradeoff>
         </Section>
 
-        <Section title="② 기와 월렛에서는">
+        <Section title="② 지갑이 열어주면 클릭 한 번">
           <p>
             지갑이 authorization 서명 UI를 제공하면 이 단계는 <b>클릭 한 번</b>으로 끝납니다.
-            서명과 전송이 분리돼 있어 트랜잭션은 우리가 대신 보낼 수 있고, 그러면 주인 EOA에 가스용
-            ETH도 필요 없습니다.
+            서명과 전송이 분리돼 있어 트랜잭션은 우리가 대신 보낼 수 있고, 그러면 주인 EOA에
+            가스용 ETH도 필요 없습니다.
           </p>
           <p>
-            지금 막힌 것은 프로토콜이 아니라 <b>지갑 API</b>입니다. dApp이 7702 authorization을
-            요청하는 표준 RPC가 아직 없습니다 — viem도 인젝티드(JSON-RPC) 계정에 대해 이 서명을
-            거부합니다. <code>personal_sign</code>으로 우회할 수도 없습니다. authorization은 접두사
-            없는 원시 서명이어야 하는데 그 메서드는 접두사를 붙이기 때문입니다.
+            지금 막힌 것은 프로토콜이 아니라 <b>지갑 API</b>입니다. dapp이 7702 authorization을
+            요청하는 표준 RPC가 아직 없어서 <b>어느 지갑으로도</b> 브라우저에서 할 수 없습니다
+            (viem도 인젝티드 계정에 대해 이 서명을 거부합니다). <code>personal_sign</code>으로
+            우회할 수도 없습니다 — authorization은 접두사 없는 원시 서명이어야 하는데 그 메서드는
+            접두사를 붙이기 때문입니다.
           </p>
           <p>
             심는 구현체(<code className="num">{ADDR.delegator7702Impl}</code>)는 MetaMask
@@ -78,6 +79,12 @@ export function WhyDelegationAccountModal({ onClose }: { onClose: () => void }) 
             구현체의 <code>delegationManager</code>는 <b>immutable</b>이라, 지갑이 자기 배포본을
             쓰면 위임 서명 도메인과 enforcer 상태 조회를 그쪽 매니저 기준으로 맞춰야 합니다.
           </p>
+          <Tradeoff>
+            <b>위임 서명은 지갑이 갈립니다.</b> MetaMask는 dapp의 위임(Delegation) 서명 요청을
+            정책적으로 거부하고 자사 스마트 계정의 ERC-7715 흐름만 엽니다. Rabby로는 발급·검증·
+            결제가 전부 동작하는 것을 확인했습니다. 즉 <b>7702 셋업만 CLI 1회</b>이고 나머지 주인
+            동작은 지갑으로 됩니다.
+          </Tradeoff>
         </Section>
 
         <Section title="③ ERC-4337로 하면 이 단계가 없어진다">

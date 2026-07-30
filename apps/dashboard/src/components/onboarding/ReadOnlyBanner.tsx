@@ -1,6 +1,7 @@
-import { useAccount, useConnect } from "wagmi";
+import { useAccount } from "wagmi";
 import { Button, Card, shortAddr } from "../ui.js";
 import { useViewer } from "../../viewer.js";
+import { WalletPicker } from "../layout/WalletPicker.js";
 
 /**
  * 읽기 전용 열람 배너 (지시서 v1.1 추가 A).
@@ -11,7 +12,6 @@ import { useViewer } from "../../viewer.js";
 export function ReadOnlyBanner() {
   const { viewAs, setViewAs } = useViewer();
   const { isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
 
   return (
     <Card className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-blue/40 bg-surface2 py-3">
@@ -21,15 +21,7 @@ export function ReadOnlyBanner() {
         발급 · 철회 · faucet은 잠겨 있습니다. 내 지갑으로 보려면 연결하세요.
       </span>
       <div className="ml-auto flex items-center gap-2">
-        {!isConnected && (
-          <Button
-            variant="primary"
-            disabled={!connectors[0]}
-            onClick={() => connectors[0] && connect({ connector: connectors[0] })}
-          >
-            MetaMask 연결
-          </Button>
-        )}
+        {!isConnected && <WalletPicker compact />}
         <Button onClick={() => setViewAs(undefined)}>열람 종료</Button>
       </div>
     </Card>

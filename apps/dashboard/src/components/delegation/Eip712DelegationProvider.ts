@@ -7,7 +7,7 @@ import {
   type Delegation,
   type JipsaPolicy,
 } from "@jipsa/delegation";
-import type { Address, Hash, PublicClient, WalletClient } from "viem";
+import type { Address, Hash, Hex, PublicClient, WalletClient } from "viem";
 import type { DelegationProvider } from "./DelegationProvider.js";
 import { ABI } from "@jipsa/delegation";
 
@@ -57,10 +57,15 @@ export class Eip712DelegationProvider implements DelegationProvider {
       signature: "0x",
     };
 
-    const signature = await this.walletClient.signTypedData({
-      account,
-      ...delegationTypedData(unsigned),
-    });
+    let signature: Hex;
+    try {
+      signature = await this.walletClient.signTypedData({
+        account,
+        ...delegationTypedData(unsigned),
+      });
+    } catch (e) {
+      throw new Error(explainSignFailure(e));
+    }
     return { ...unsigned, signature };
   }
 
@@ -85,4 +90,35 @@ export class Eip712DelegationProvider implements DelegationProvider {
       ],
     });
   }
+}
+
+/**
+ * 위임 서명 실패 해설.
+ *
+ * ⚠️ **MetaMask 는 dapp 의 위임 서명 요청을 의도적으로 차단한다.**
+ *    `primaryType: "Delegation"` + 도메인 `DelegationManager` 조합을 알아보고
+ *    "External signature requests cannot sign delegations for internal accounts"
+ *    (code -32603) 로 거절한다. 자사 스마트 계정의 ERC-7715 `wallet_grantPermissions`
+ *    흐름으로만 허용한다 — 위임 서명은 지출 권한을 넘기는 행위라 일반 서명 팝업으로
+ *    아무 dapp 이나 받으면 위험하다는 판단이고, 타당하다.
+ *
+ *    그래서 이 경로는 MetaMask 로는 열리지 않는다. 대안은 두 가지다:
+ *      · 이 가드가 없는 인젝티드 지갑으로 서명
+ *      · 주인 키로 CLI 발급 (`pnpm -F @jipsa/agent grant`)
+ *    raw RPC 오류를 그대로 보여주면 원인을 알 수 없으므로 여기서 설명으로 바꾼다.
+ */
+function explainSignFailure(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+
+  if (/cannot sign delegations for internal accounts/i.test(msg)) {
+    return (
+      "MetaMask 가 위임 서명 요청을 차단했습니다 — dapp 이 위임(Delegation) 서명을 받는 것을 " +
+      "정책적으로 막고, 자사 스마트 계정의 ERC-7715 흐름만 허용합니다. " +
+      "주인 키로 CLI 발급을 쓰거나(pnpm -F @jipsa/agent grant), 이 제약이 없는 지갑으로 서명하세요."
+    );
+  }
+  if (/user rejected|denied|4001/i.test(msg)) {
+    return "지갑에서 서명을 거절했습니다.";
+  }
+  return msg.split("\n")[0] ?? msg;
 }

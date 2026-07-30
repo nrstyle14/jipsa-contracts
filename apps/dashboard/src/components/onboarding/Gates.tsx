@@ -1,16 +1,12 @@
 import { useState } from "react";
 import { ADDR } from "@jipsa/delegation";
 import { Button, Card } from "../ui.js";
+import { WalletPicker } from "../layout/WalletPicker.js";
+import { WhyRabbyButton } from "./WhyRabby.js";
 import { expectedDelegationCode } from "../../hooks/useAccountStatus.js";
 import { WhyDelegationAccountModal } from "./WhyDelegationAccount.js";
 
-export function ConnectGate({
-  onConnect,
-  onViewDemo,
-}: {
-  onConnect: () => void;
-  onViewDemo: () => void;
-}) {
+export function ConnectGate({ onViewDemo }: { onViewDemo: () => void }) {
   return (
     <Card className="mx-auto mt-16 max-w-md text-center">
       <h2 className="mb-2 text-lg font-bold">지갑을 연결하세요</h2>
@@ -18,15 +14,20 @@ export function ConnectGate({
         주인 지갑을 연결하면 도장 상태와 에이전트 목록을 불러옵니다.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button variant="primary" onClick={onConnect}>
-          MetaMask 연결
-        </Button>
+        <WalletPicker />
         <Button onClick={onViewDemo}>데모 계정 보기</Button>
       </div>
       <p className="mt-3 text-[11px] text-muted">
         지갑이 없어도 데모 계정의 에이전트 · 정책 게이지 · 실시간 피드를 읽기 전용으로 볼 수
         있습니다.
       </p>
+      <div className="mt-3 border-t border-line pt-3 text-[11px] text-muted">
+        <p className="mb-1">
+          위임 서명에는 <b className="text-text">Rabby</b>를 쓰세요 — MetaMask는 dapp의 위임
+          서명 요청을 정책적으로 거부합니다.
+        </p>
+        <WhyRabbyButton />
+      </div>
     </Card>
   );
 }
@@ -84,9 +85,9 @@ export function DelegationAccountBanner({
         </button>
       </div>
       <p className="mb-3 text-sm text-muted">
-        EIP-7702 코드가 심겨야 위임을 발급할 수 있습니다. MetaMask는 임의 체인에서 type-4
-        authorization을 서명하지 못하므로 <b>아래 명령을 터미널에서 1회</b> 실행하세요.
-        대시보드는 개인키를 받지 않습니다.
+        EIP-7702 코드가 심겨야 위임을 발급할 수 있습니다. type-4 authorization을 dapp이 요청하는
+        <b>표준 지갑 API가 아직 없어</b> 어느 지갑으로도 브라우저에서 할 수 없으므로,{" "}
+        <b>아래 명령을 터미널에서 1회</b> 실행하세요. 대시보드는 개인키를 받지 않습니다.
       </p>
       <pre className="num overflow-x-auto rounded-btn border border-line bg-bg p-3 text-[11px] leading-relaxed text-muted">
         {cmd}
