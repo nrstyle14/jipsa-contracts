@@ -20,7 +20,9 @@ src/
 └── PolicyAccount.sol             # 지출 정책이 강제되는 에이전트 컨트랙트 지갑 (플랜 B)
 script/
 ├── Deploy.s.sol                  # 플랜 B 스택
-└── DeployErc7710.s.sol           # ERC-7710 스택 (프레임워크 + enforcer)
+├── DeployErc7710.s.sol           # ERC-7710 스택 (프레임워크 + enforcer)
+├── DemoRedeem.s.sol              # 실체인 데모 (자금→바인딩→서명→리딤)
+└── PrintCaveats.s.sol            # caveat terms 기준값 출력 (TS 인코딩 교차검증용)
 test/
 ├── JipsaSettlementToken.t.sol    # 토큰 (역할, faucet 쿨다운, pause, permit)
 ├── OwnerBindingRegistry.t.sol    # 바인딩 (프런트러닝 차단, 제안 취소)
@@ -31,8 +33,25 @@ test/
 └── erc7710/
     ├── DelegationRedeem.t.sol    # 7702 리딤 사이클 (서명·철회·Dojang)
     ├── FullCaveatSet.t.sol       # caveat 7종 조합 + 위반 6종
+    ├── CumulativeDrain.t.sol     # 건당 상한만으로는 잔액이 빠진다 (회귀 고정)
+    ├── DemoScenario.t.sol        # 차단 사유가 caveat 순서에 의존 (회귀 고정)
     ├── DojangEnforcer.fork.t.sol # enforcer × 실제 DojangScroll
     └── LiveCycle.fork.t.sol      # 실배포 주소 + 실도장 주인 축약 사이클
+```
+
+컨트랙트 밖은 pnpm 워크스페이스다. 대시보드·에이전트는 공유 패키지 하나만 본다.
+
+```
+packages/delegation/src/          # 공유: 주소·ABI·caveat 인코딩·EIP-712·revert 디코딩
+apps/dashboard/src/               # 관제 웹앱 (Vite + React + wagmi/viem + Tailwind)
+├── viewer.tsx                    #   조회 주소 결정 — 읽기 전용 열람(?viewAs=) 지원
+├── hooks/useLiveFeed.ts          #   실시간 피드 (Flashblocks pending → 확정 승격)
+├── hooks/useDaemon.ts            #   에이전트 데몬 제어 (status · inject · pay-now)
+└── components/                   #   등록 마법사 · 공격 주입 · 긴급 철회 · 설명 팝업
+apps/agent/                       # 에이전트 (Node + tsx)
+├── src/daemon.ts                 #   상주 데몬 — 주기 결제 + 로컬 제어 API
+├── src/agent.ts                  #   시나리오 모드 (normal · attack · revoked)
+└── scripts/                      #   grant · pay · trigger-block · verify · e2e
 ```
 
 ## GIWA 세폴리아 네트워크 정보
@@ -125,7 +144,7 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 ```bash
 git submodule update --init --recursive   # lib/forge-std, lib/openzeppelin-contracts
 forge build
-forge test -vvv
+forge test -vvv                          # 55개 통과 · 9개는 포크 전용이라 skip (총 64개)
 
 # DojangScroll 실제 조회를 검증하는 포크 테스트 포함
 # 블록을 고정하면 Foundry가 포크 상태를 캐시한다 — 재실행이 빨라지고
@@ -154,7 +173,7 @@ forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
 배포 비용은 세 컨트랙트 합쳐 약 3,331,845 gas (≈ 0.0000034 ETH)다.
 가스가 없으면 https://docs.giwa.io/get-started/faucets 에서 받는다.
 
-## ERC-7710 위임 스택 (feat/erc7710-delegation)
+## ERC-7710 위임 스택
 
 MetaMask delegation-framework **감사 태그 v1.3.0**을 그대로 배포하고, JIPSA는
 책임 귀속을 강제하는 caveat enforcer 2종만 공급한다. 커스텀 계정 코드는 0줄이다.
@@ -236,10 +255,13 @@ cast code <주인EOA> --rpc-url https://sepolia-rpc.giwa.io
 > authorization을 revert 없이 건너뛰므로 `status 1`만으로는 성공을 판정할 수 없다 —
 > **한 블록 정도 뒤에 `cast code`로 다시 확인할 것.**
 
-> **지갑 제약**: type-4 authorization 서명은 개인키 접근이 필요해 MetaMask 인젝티드
-> 프로바이더로는 임의 체인에서 불가하다. 그래서 이 단계만 주인 데모 키로 CLI에서
-> 처리한다. **코드가 심어진 뒤의 모든 주인 동작(위임 EIP-712 서명, `disableDelegation`,
-> 일반 tx)은 MetaMask로 정상 수행된다.**
+> **지갑 제약**: dapp 이 type-4 authorization 서명을 요청하는 **표준 지갑 API 가 없다** —
+> MetaMask 한정이 아니라 어느 지갑으로도 브라우저에서 할 수 없다 (viem 도 인젝티드 계정에
+> 대해 이 서명을 거부한다). `personal_sign` 으로 우회할 수도 없다: authorization 은 접두사
+> 없는 원시 서명이어야 하는데 그 메서드는 `\x19Ethereum Signed Message:` 를 붙인다.
+> 그래서 이 단계만 주인 데모 키로 CLI 에서 처리한다. 코드가 심어진 뒤의 주인 동작
+> (위임 EIP-712 서명, `disableDelegation`, 일반 tx)은 **지갑으로 수행한다 — 단 위임 서명은
+> Rabby 가 필요하다** (아래 "주인 지갑" 참조).
 
 ### 실체인 데모 실행
 
@@ -268,6 +290,66 @@ GIWA Sepolia 실행 결과 (2026-07-28):
 | `redeemDelegations` | 217,075 | 성공 — 주인 EOA에서 250 tKRW 직접 지급 |
 | 상한 초과 리딤 | — | `PerTxCapExceeded`로 차단 |
 
+### 주인 지갑 — Rabby 를 쓴다
+
+주인이 하는 동작 중 **위임 EIP-712 서명만 지갑이 갈린다** (2026-07-30 실측).
+
+| 주인이 하는 동작 | MetaMask | Rabby |
+|---|---|---|
+| 위임 EIP-712 서명 | **정책 차단** | **동작 확인** |
+| `disableDelegation` · faucet 전송 | 가능 | 가능 |
+| EIP-7702 셋업 (type-4) | 불가 | 불가 (표준 지갑 API 부재 — 공통) |
+| GIWA 네트워크 추가 | 가능 | 대시보드 버튼으로 자동 추가 |
+
+MetaMask 는 도메인 `DelegationManager` + `primaryType: Delegation` 조합을 알아보고
+`External signature requests cannot sign delegations for internal accounts` (-32603) 로
+거부한다. 자사 스마트 계정의 ERC-7715 `wallet_grantPermissions` 로만 이 흐름을 연다.
+
+판단 자체는 타당하다 — 위임 서명은 지출 권한을 넘기는 행위이고, 일반 서명 팝업으로
+아무 dapp 이나 받으면 위험하다. JIPSA 가 지적하는 문제와 같은 문제의식이며, 우리는 그
+권한을 컨트랙트 레벨 정책으로 묶어 해결한다. 그래서 **대시보드는 MetaMask 를 연결
+목록에서 제외**한다 (`window.ethereum` 폴백까지 함께 막는다).
+
+지갑 없이 볼 수도 있다 — `?viewAs=<주소>` 로 열면 에이전트·게이지·실시간 피드를
+읽기 전용으로 열람하고 쓰기 버튼은 전부 잠긴다.
+
+### 대시보드·에이전트 실행
+
+```bash
+pnpm install
+pnpm -r typecheck
+pnpm -F @jipsa/delegation test   # 26개 통과 · 5개는 RPC 필요라 skip (총 31개)
+
+# 터미널 1 — 관제 대시보드 (http://localhost:5173)
+pnpm -F @jipsa/dashboard dev
+
+# 터미널 2 — 에이전트 데몬 (주기 결제 + 대시보드 제어 API :8787)
+set -a; source .env; set +a
+pnpm -F @jipsa/agent daemon                      # 기본 30초 주기 · 건당 2 tKRW
+pnpm -F @jipsa/agent daemon -- --interval 120000  # 촬영 중 한도를 아끼려면
+```
+
+위임 발급은 대시보드 마법사(Rabby 서명) 또는 CLI 로 한다. 발급된
+`delegation.json` 을 `apps/agent/` 에 두면 데몬이 다음 주기에 자동으로 집는다.
+
+```bash
+pnpm -F @jipsa/agent grant          # 주인 키로 발급 (OWNER_PRIVATE_KEY)
+pnpm -F @jipsa/agent verify         # 리딤 가능한지 시뮬레이션으로 검증
+pnpm -F @jipsa/agent pay -- --count 3 --interval 2000
+pnpm -F @jipsa/agent agent -- --scenario attack   # 인젝션 → 이중 차단
+pnpm -F @jipsa/agent agent -- --enable            # 철회한 위임 되살리기
+pnpm -F @jipsa/agent e2e            # 22개 체크 — 통과가 촬영 가능 판정 기준
+```
+
+> ⚠️ **일간 한도는 데몬이 켜져 있으면 빠르게 소진된다.** 30초 × 2 tKRW = 시간당
+> 240 tKRW 이므로 일간 500 은 약 2시간에 바닥난다. 바닥나면 데몬은 주기 결제를
+> **멈추고** 사유를 남긴다(가스를 태우지 않는다). enforcer 상태는 `delegationHash` 가
+> 키라서 **위임을 새로 발급하면 한도가 리셋**된다.
+
+> ⚠️ **e2e 를 연속 실행하지 말 것.** 한 번에 온체인 호출이 40건 이상이고 Dojang 검증처럼
+> 무거운 `eth_call` 이 섞여 있어, 쉬지 않고 3회 돌리면 2회차부터 `over rate limit` 으로
+> 실패한다(회복 1~2분). 실행 사이에 1~2분을 두거나 전용 RPC(`RPC_URL`)를 쓴다.
+
 ### 격리 모델의 차이 (중요)
 
 `PolicyAccount`는 **예치한 예산**이 피해 상한이었다. 7702 모델은 예치가 없고 주인 EOA
@@ -276,6 +358,15 @@ enforcer가 곧 금고 칸막이다. 데모는 한도를 타이트하게 설정�
 
 `PolicyAccount`는 플랜 B로 `main`에 유지된다.
 
-## ⚠️ 배포 전 확인 사항 (TODO)
+## 알려진 한계 (2026-07-30)
 
-1. **배포 주소 표 채우기**: 배포 후 위 표를 실제 주소로 갱신.
+- **up.id 이름 표기 없음.** `useUpId` 는 이더리움 메인넷 ENS + CCIP-Read
+  (`https://id.giwa.io/gateway/…`) 로 실제 해석하지만, 데모 EOA 에는 등록된 이름이 없어
+  주소 축약으로 폴백된다. up.id 는 지갑에 묶인 SBT 라 테스트넷 EOA 로 돌릴 수 없다.
+- **가맹처 API 실호출 없음.** 에이전트는 작업 큐를 처리하는 척하고 결제만 실제로 한다.
+- **대시보드는 위임을 한 장만 보관한다.** 에이전트를 둘 등록하면 한 번에 하나만 온전히
+  보인다 (멀티 위임 관리 UI 는 범위에서 제외).
+- **운영 권한이 배포자 한 주소에 모여 있다.** tKRW 의 `MINTER_ROLE`·`PAUSER_ROLE`·
+  `DEFAULT_ADMIN_ROLE`, `DojangVerifiedGate.admin`, `DelegationManager.owner` 가 모두
+  `0xA53826D1959A254F10c2F96f8e7A0F1D8E520A26` 다. 데모용 무담보 토큰이라 문제가 아니지만
+  메인넷에서는 멀티시그·타임락으로 옮겨야 한다.
