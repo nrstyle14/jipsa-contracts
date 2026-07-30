@@ -32,7 +32,7 @@ test/
 ├── PolicyAccount.fork.t.sol      # 실제 도장으로 바인딩→지출 통합 검증
 └── erc7710/
     ├── DelegationRedeem.t.sol    # 7702 리딤 사이클 (서명·철회·Dojang)
-    ├── FullCaveatSet.t.sol       # caveat 7종 조합 + 위반 6종
+    ├── FullCaveatSet.t.sol       # caveat 7종 조합 + 위반 5종
     ├── CumulativeDrain.t.sol     # 건당 상한만으로는 잔액이 빠진다 (회귀 고정)
     ├── DemoScenario.t.sol        # 차단 사유가 caveat 순서에 의존 (회귀 고정)
     ├── DojangEnforcer.fork.t.sol # enforcer × 실제 DojangScroll
@@ -85,7 +85,8 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 
 ## 배포 주소 (GIWA Sepolia)
 
-전부 Blockscout에서 verify 완료. 배포 gas 합계 10,915,043.
+전부 Blockscout에서 verify 완료. 아래 12건 배포 gas 합계 **10,841,972**
+(`DeployErc7710` 브로드캐스트 전체는 초기 발행 `mint` 1건이 더해져 10,915,043).
 
 > **verify 기준 커밋**: 익스플로러에 등록된 소스는 `a14a988` 시점의 `src/`다.
 > 이후 `b693e90`에서 `JipsaPerTxCapEnforcer.sol`에 "단독 사용 금지" 경고 **주석만**
@@ -123,14 +124,24 @@ EAS·AttestationIndexer·스키마 UID 조회는 모두 DojangScroll 내부에�
 
 데모 편의를 위해 `faucet()`이 호출자에게 1,000 tKRW를 민팅한다 (주소당 24시간 쿨다운).
 
-### 자금 투입
+### 자금 투입 (플랜 B `PolicyAccount` 한정)
 
-주인이 tKRW를 `PolicyAccount` 주소로 **직접 transfer** 한다. approve 플로우는 없다.
+주인이 tKRW를 `PolicyAccount` 주소로 **직접 transfer** 한다. 받는 함수가 없고 지급은
+자기 잔액에서 `safeTransfer` 로 나가므로, 컨트랙트 주소에 잔액이 있어야 한다.
+
+**approve 플로우는 일부러 두지 않았다** — approve 가 열려 있으면 에이전트가 다단계
+호출로 한도 밖 손실을 만들 수 있어 "피해가 한도 안에 갇힌다"는 보장이 깨진다
+(임의 call 을 제거한 것과 같은 이유. 아래 "한계" 참조).
+
+실제 데모 경로인 7702 모델에는 **이 단계가 없다.** 예치가 없고 주인 EOA 잔액에서
+바로 나가므로 자금을 옮겨 둘 곳이 아예 없다 (아래 "격리 모델의 차이" 참조).
 
 ## 시작하기
 
 ```bash
-git submodule update --init --recursive   # lib/forge-std, lib/openzeppelin-contracts
+# lib/forge-std · lib/openzeppelin-contracts · lib/delegation-framework(v1.3.0)
+# delegation-framework 가 없으면 forge build 부터 실패한다 — 계정·매니저를 여기서 가져온다
+git submodule update --init --recursive
 forge build
 forge test -vvv                          # 55개 통과 · 9개는 포크 전용이라 skip (총 64개)
 
@@ -158,7 +169,8 @@ forge verify-contract <ADDRESS> src/PolicyAccount.sol:PolicyAccount \
     <OWNER> <AGENT> <REGISTRY> <GATE> <TOKEN> '(100000000000,1000000000,10000000000,<VALID_UNTIL>,false)')
 ```
 
-배포 비용은 세 컨트랙트 합쳐 약 3,331,845 gas (≈ 0.0000034 ETH)다.
+이 스크립트가 배포하는 세 컨트랙트의 실측 gas는 합쳐 **2,487,474**다
+(tKRW 1,404,602 · Gate 498,799 · Registry 584,073 — `broadcast/` 영수증 기준).
 가스가 없으면 https://docs.giwa.io/get-started/faucets 에서 받는다.
 
 ## ERC-7710 위임 스택
@@ -326,7 +338,7 @@ pnpm -F @jipsa/agent verify         # 리딤 가능한지 시뮬레이션으로 
 pnpm -F @jipsa/agent pay -- --count 3 --interval 2000
 pnpm -F @jipsa/agent agent -- --scenario attack   # 인젝션 → 이중 차단
 pnpm -F @jipsa/agent agent -- --enable            # 철회한 위임 되살리기
-pnpm -F @jipsa/agent e2e            # 22개 체크 — 통과가 촬영 가능 판정 기준
+pnpm -F @jipsa/agent e2e            # 전건 통과가 촬영 가능 판정 기준 (N/N 으로 출력)
 ```
 
 > ⚠️ **일간 한도는 데몬이 켜져 있으면 빠르게 소진된다.** 30초 × 2 tKRW = 시간당
