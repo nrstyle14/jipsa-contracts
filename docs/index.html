@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>집사(JIPSA) — 검증된 주인에게 귀속되는 AI 에이전트 결제 레일</title>
+<style>
+@page { size: A4; margin: 11mm 12mm 9mm 12mm; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Noto Sans CJK KR", sans-serif; font-size:8.1pt; line-height:1.42; color:#1C2B3A; }
+.hdr { display:flex; align-items:center; gap:9px; border-bottom:2.2px solid #BE2B25; padding-bottom:7px; margin-bottom:9px; }
+.hdr svg { width:26px; height:26px; flex-shrink:0; }
+.ttl { font-size:15.5pt; font-weight:800; letter-spacing:-.4px; }
+.sub { font-size:8.4pt; color:#5E6B78; margin-top:1px; }
+.meta { margin-left:auto; text-align:right; font-size:7.4pt; color:#5E6B78; line-height:1.45; }
+.lead { background:#F4F6F8; border-left:3px solid #BE2B25; padding:6px 9px; margin-bottom:8px; font-size:8.1pt; }
+.lead b { color:#BE2B25; }
+h2 { font-size:9.2pt; font-weight:800; margin:8px 0 4px; padding-bottom:2.5px; border-bottom:1px solid #D8DEE5; }
+h2:first-of-type { margin-top:0; }
+p { margin-bottom:4px; }
+ul { list-style:none; }
+li { position:relative; padding-left:9px; margin-bottom:2.5px; }
+li:before { content:""; position:absolute; left:0; top:6px; width:3px; height:3px; border-radius:50%; background:#BE2B25; }
+b, strong { font-weight:700; }
+.cols { display:flex; gap:11px; }
+.cols > div { flex:1; }
+table { width:100%; border-collapse:collapse; margin:3px 0 4px; }
+td { padding:3px 6px; vertical-align:top; border-bottom:1px solid #E4E9EE; font-size:7.9pt; }
+td:first-child { width:74px; font-weight:700; white-space:nowrap; color:#1C2B3A; }
+tr:last-child td { border-bottom:none; }
+.card { background:#F4F6F8; border-radius:5px; padding:7px 9px; }
+.dark { background:#1C2B3A; color:#EDF2F7; border-radius:5px; padding:7px 9px; }
+.dark b { color:#F0C9C7; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+.chip { background:#fff; border:1px solid #C9D3DC; border-radius:3px; padding:2px 6px; font-size:7.5pt; }
+.foot { margin-top:7px; padding-top:5px; border-top:1px solid #D8DEE5; font-size:7.2pt; color:#5E6B78; line-height:1.5; }
+.acc { color:#BE2B25; font-weight:700; }
+.mono { font-family:"Noto Sans Mono CJK KR", monospace; font-size:7.4pt; }
+
+@media screen {
+  body { max-width: 860px; margin: 0 auto; padding: 26px 22px 40px; font-size:10.5pt; }
+  .links { display:flex; flex-wrap:wrap; gap:8px; margin: 0 0 14px; }
+  .links a { text-decoration:none; font-size:9pt; font-weight:700; color:#1C2B3A; background:#F4F6F8; border:1px solid #C9D3DC; border-radius:5px; padding:5px 11px; }
+  .links a.primary { background:#BE2B25; color:#fff; border-color:#BE2B25; }
+  td { font-size:10pt; } .lead, li, p { font-size:10.5pt; }
+  h2 { font-size:12pt; } .ttl { font-size:20pt; } .sub { font-size:11pt; } .meta { font-size:9pt; }
+  .chip { font-size:9pt; } .foot { font-size:9pt; } .mono { font-size:9.5pt; }
+}
+@media print { .links { display:none; } }
+</style></head><body>
+
+<div class="hdr">
+  <svg viewBox="0 0 100 100" fill="none" stroke="#BE2B25" stroke-width="14.5" stroke-linecap="butt">
+    <path d="M37.73 24.83 A28 28 0 0 0 37.73 75.17"/><path d="M62.27 24.83 A28 28 0 0 1 62.27 75.17"/>
+    <circle cx="50" cy="50" r="8.5" fill="#BE2B25" stroke="none"/></svg>
+  <div>
+    <div class="ttl">집사 (JIPSA)</div>
+    <div class="sub">검증된 주인에게 귀속되는 AI 에이전트 결제 레일</div>
+  </div>
+  <div class="meta">GIWA 가속(GASOK) 2026 · 기와 네이티브 서비스<br>Team JIPSA · 이남열 · 김재환<br>nrstyle14@gmail.com</div>
+</div>
+
+<div class="links">
+  <a class="primary" href="https://github.com/nrstyle14/jipsa-contracts">GitHub 저장소 — 컨트랙트·대시보드·에이전트 전체 코드</a>
+  <a href="https://github.com/nrstyle14/jipsa-contracts#배포-주소-giwa-sepolia">배포 주소 12건 (verify 완료)</a>
+  <a href="https://sepolia-explorer.giwa.io/address/0x8C9c8437C27003f3d86F438c7147668d9cC5948C">DojangCaveatEnforcer 익스플로러</a>
+  <a href="jipsa-onepager.pdf">PDF 다운로드</a>
+</div>
+
+<div class="lead">
+  <b>한 줄 정의</b> — 에이전트 지갑을 Dojang 검증 주인(Verified Address)에 온체인 바인딩하고, 위임된 지출 정책 안에서만 자율 결제를 허용하는 에이전트 결제·정산 인프라.
+  <span style="color:#5E6B78">집사(執事): 주인의 살림을 위임받아 대신 처리하되, 주인이 누구인지 분명하고 책임도 주인에게 귀속되는 존재.</span>
+</div>
+
+<h2>문제 — 에이전트 결제의 책임 공백 (Know Your Agent)</h2>
+<p>에이전트 결제는 이미 실체다(x402: 활성 에이전트 6.9만, 누적 1.65억 건 — 2026.4). 그러나 이 생태계는 <b>"에이전트는 KYC를 통과할 수 없다"</b>는 전제 위에서 신원을 우회하며 성장했고, 그 대가가 드러나고 있다.</p>
+<ul>
+  <li><b>에이전트가 피해자</b> — Freysa(인젝션으로 $47K 전액 이체, 2024.11), AIXBT(가짜 프롬프트 2줄로 55.5 ETH, 2025.3), Grok/Bankr($150K+, 2026.5). Grok 사건의 회수 수단은 법적 조치가 아니라 <b>여론 압박</b>이었다 — 공격자 신원을 특정할 방법이 없어서.</li>
+  <li><b>에이전트가 가해자</b> — 신원 게이트가 없어 가짜 서비스·가짜 에이전트 생성 비용이 0. x402에서 시빌 플러딩으로 구매 에이전트를 공격자 엔드포인트로 유도하는 공격이 학술 실증됨.</li>
+  <li><b>구조적 공백</b> — ERC-8004는 평판이지 법적 책임 주체가 아니고, AP2 mandate는 승인 증명일 뿐 주인은 익명. 에이전트는 법인격이 없어 AML상 "고객"도, 소송 상대도 없다.</li>
+</ul>
+
+<h2>솔루션 — 두 겹 방어 + 정산 레일</h2>
+<div class="cols">
+  <div class="card"><b class="acc">1. 귀속 (Binding)</b><br>에이전트 지갑을 주인의 Dojang Verified Address에 온체인 바인딩(제안→수락). 시빌 비용이 0에서 <b>실명 KYC 1건</b>으로 상승하고, 사고 시 발행자를 통한 법적 신원 특정 경로가 열린다.</div>
+  <div class="card"><b class="acc">2. 정책 (Policy)</b><br>지갑에서 EIP-712 서명 한 번으로 건당·일간·누적 한도, 유효기간, 허용 대상·수신처를 위임. <b>caveat 7종이 컨트랙트 레벨에서 강제</b> — 인젝션이 성공해도 피해는 한도 안에 갇힌다.</div>
+  <div class="card"><b class="acc">3. 정산 (Settlement)</b><br>호출당 자율 결제(tKRW), 실시간 지출 관제, <b>원클릭 철회</b>. 주인 KYC가 취소되면 에이전트도 즉시 정지 — 신뢰가 상속되는 구조.</div>
+</div>
+<p style="margin-top:6px"><b>표준 위에 얹는다</b> — 감사된 MetaMask delegation-framework(v1.3.0 · ERC-7710/7579)를 원본 그대로 배포하고, EIP-7702로 주인 EOA 자체가 위임 계정이 된다. <b>커스텀 계정 코드는 0줄</b>이며 JIPSA는 caveat enforcer 2종만 공급한다 — 스톡 enforcer가 "얼마나"를 제한하고, <span class="mono">DojangCaveatEnforcer</span>가 <b>"누가 책임지는가"</b>를 강제한다.</p>
+
+<h2>왜 GIWA에서만 가능한가</h2>
+<table>
+  <tr><td>Dojang</td><td>주인 바인딩의 신뢰 원천 — 거래소 KYC 기반 attestation은 셀프 클레임 DID와 격이 다르다. 발급은 GIWA가, 소비는 집사가.</td></tr>
+  <tr><td>기와월렛</td><td>에이전트 관제탑 — 예산 위임, 한도 설정, 실시간 지출 확인, 위임 즉시 해제. <b>MetaMask는 외부 dApp의 위임 서명을 정책상 거부(자사 계정 전용) — 기와월렛이 이 자리를 가져갈 수 있다.</b></td></tr>
+  <tr><td>Flashblocks</td><td>200ms preconfirmation — 사람이 아닌 머신 속도의 결제에서 실질 의미를 갖는다. 관제 화면이 결제 즉시 반응한다.</td></tr>
+</table>
+
+<div class="cols">
+<div>
+<h2>현재 상태 (2차 마감 시점)</h2>
+<ul>
+  <li>GIWA 세폴리아 <b>컨트랙트 12개 배포·소스 verify 완료</b> — ERC-7710 프레임워크 + tKRW + Dojang 게이트 + 바인딩 레지스트리 + 커스텀 enforcer 2종</li>
+  <li>실체인 전 사이클 성공 — 바인딩 → 위임 서명 → <b>리딤 결제(217K gas)</b>, 상한 초과는 <span class="mono">PerTxCapExceeded</span>로 차단</li>
+  <li>테스트 <b>64개</b>(포크 포함) 통과 · 관제 대시보드 + 상주 에이전트 데몬 · 지갑 없이 열람 가능한 읽기 전용 링크</li>
+</ul>
+</div>
+<div>
+<h2>포지셔닝 — x402와 싸우지 않는다</h2>
+<p>모든 에이전트 결제에 KYC를 강제하자는 것이 아니다. 익명 레일(x402)은 크립토 네이티브 마이크로페이먼트를 갖고, <b>집사는 익명 레일이 구조적으로 진입할 수 없는 영역 — 규제권 금융(AML·특금법), 실물 커머스, 분쟁·환불이 필요한 거래 — 을 연다.</b> "실명 책임 계층"은 x402/ERC-8004 진영이 정반대로 설계되어 따라올 수 없는 부분이다.</p>
+<div class="chips"><span class="chip">에이전틱 커머스 $3~5조 (2030)</span><span class="chip">KYA = 공인된 공백</span><span class="chip">국내 온체인 레일 선점</span></div>
+</div>
+</div>
+
+<h2>KPI 루프 · 로드맵</h2>
+<div class="dark">
+<b>KPI</b> — 에이전트는 일 수십~수백 건의 마이크로트랜잭션을 생성해 트랜잭션 지표에 구조적으로 유리하다. <b>활성 위임의 예산 총액(AuD) = 관리 자산</b>이며 자금은 주인 지갑을 떠나지 않는 논커스터디 설계다. 주인·에이전트 계정이 사용자 수로 이중 성장 — 보너스 그랜트 산식(최대 $80K)과 정렬된다.
+</div>
+<table style="margin-top:5px">
+  <tr><td>8~9월</td><td>에이전트 개발팀 파일럿(가속 동기 팀들이 첫 고객), 프라이빗 메인넷 이행, 분쟁·환불 플로우</td></tr>
+  <tr><td>KBW 이후</td><td>에이전트 간(A2A) 에스크로, 가맹처 SDK, up.id 연동, 거래액 은닉(ZK), 기와월렛 네이티브 연동, ERC-7715 권한 요청 대응</td></tr>
+</table>
+
+<h2>리스크와 대응</h2>
+<ul>
+  <li><b>해소됨</b> — 테스트넷 도장 발급·온체인 검증 완료, 프라이빗 메인넷 Dojang 제공 확인(로드맵 전 구간 동일 아키텍처).</li>
+  <li><b>위임 서명의 지갑 제약</b> — MetaMask가 <span class="mono">primaryType: Delegation</span> 서명을 거부해 MVP는 Rabby로 시연한다. EIP-7702 셋업(type-4)은 표준 지갑 API가 없어 1회 CLI로 처리. 위임 발급을 어댑터로 감싸 두어 기와월렛 지원이나 ERC-7715가 열리면 구현체만 교체된다.</li>
+  <li><b>격리 모델</b> — 예치가 없어 피해 상한 = enforcer 캡이다. 누적 상한을 항상 함께 걸도록 회귀 테스트로 고정했고, 데모는 한도를 좁힌 전용 EOA로 진행한다.</li>
+  <li><b>표준 변동성</b> — x402·ERC-8004과는 경쟁이 아닌 보완 포지션을 유지하고, 필요 시 호환 결제 플로우를 채택한다.</li>
+</ul>
+
+<div class="foot">
+<b>Team JIPSA</b> — 이남열(Founder · 아키텍처 총괄): 국내 최초 상용화 DID 플랫폼(현 행안부 모바일 신분증 기반 기술) 설계, WEMIX PLAY 온체인 서비스 총괄, SmartPlay 공동창업. · 김재환(스마트 컨트랙트 엔지니어): WEMIX·이더리움 계열 스테이킹·온체인 오더북 거래 시스템 개발, 現 블록체인 전문기업 재직.<br>
+저장소 github.com/nrstyle14/jipsa-contracts · 배포·verify 전체 sepolia-explorer.giwa.io · 근거: x402 현황(RZLT) · KYA(eco.com) · Freysa/AIXBT(Turnkey) · Grok 사건(OECD.AI) · x402 공격 실증(arXiv) · IMF Agentic AI &amp; Payments · GIWA Docs
+</div>
+
+</body></html>
