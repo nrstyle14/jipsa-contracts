@@ -49,6 +49,8 @@ export interface DaemonStatus {
   lastPaymentHash?: Hex;
   rateLimited: boolean;
   lastError?: string;
+  /** 스스로 낫지 않는 정책 차단으로 주기 결제가 멈췄을 때의 사유 */
+  pausedReason?: string;
   lastInjectionAt?: string;
   lastInjectionBlocked: DaemonBlocked[];
   busy: boolean;

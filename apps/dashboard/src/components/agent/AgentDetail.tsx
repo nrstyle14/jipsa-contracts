@@ -244,6 +244,11 @@ function DaemonLine({ daemon }: { daemon: ReturnType<typeof useDaemon> }) {
         {seconds}초 주기 · 결제 {s?.paymentsMade ?? 0}건
       </span>
       {s?.waitingForDelegation && <span className="text-[#E8A6A1]">위임 대기 중</span>}
+      {s?.pausedReason && (
+        <span className="text-[#E8A6A1]">
+          주기 결제 멈춤 — {s.pausedReason} (위임을 새로 발급하면 재개됩니다)
+        </span>
+      )}
       {s?.rateLimited && (
         <span className="text-[#E8A6A1]">RPC 한도 — 지금은 건너뛰고 잠시 후 다시 시도합니다</span>
       )}

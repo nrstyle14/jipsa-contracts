@@ -19,6 +19,17 @@ export function WalletPicker({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
 
   const list = pickable(connectors);
+  // MetaMask 만 깔려 있으면 고를 것이 없다 — 이유를 말해야 막다른 길이 되지 않는다
+  const onlyMetaMask = list.length === 0 && connectors.some(isMetaMask);
+
+  if (onlyMetaMask) {
+    return (
+      <span className="text-[11px] text-[#E8A6A1]">
+        쓸 수 있는 지갑이 없습니다 — MetaMask는 위임 서명을 거부해 제외했습니다. Rabby를
+        설치하세요.
+      </span>
+    );
+  }
 
   // 하나뿐이면 고를 이유가 없다
   if (list.length <= 1) {
@@ -77,13 +88,39 @@ function displayName(c: Connector): string {
 }
 
 /**
+ * MetaMask 인가.
+ *
+ * EIP-6963 은 `rdns`(= wagmi 의 커넥터 id)로 지갑을 식별한다. 이름도 함께 보는 이유는
+ * 배포판에 따라 id 가 다를 수 있어서다 — 하나만 보면 놓친다.
+ */
+function isMetaMask(c: Connector): boolean {
+  return /metamask/i.test(c.id) || /metamask/i.test(c.name);
+}
+
+/**
  * 보여줄 커넥터 목록.
  *
- * EIP-6963 으로 발견된 지갑이 있으면 이름·아이콘이 있는 그것들만 쓴다. 일반
- * `injected` 커넥터는 "어느 지갑인지 알 수 없는" 항목이라 같이 보이면 혼란스럽다.
- * 6963 을 안 쓰는 지갑만 있는 환경에서는 폴백으로 남는다.
+ * ⚠️ **MetaMask 는 목록에서 제외한다.** 연결은 되지만 위임 EIP-712 서명을 정책적으로
+ *    거부하므로(`External signature requests cannot sign delegations for internal
+ *    accounts`), 고를 수 있게 두면 반드시 그것부터 눌러 보고 Act 1 에서 막힌다.
+ *    라벨만 지우는 것으로는 부족했다 — 6963 으로 발견되면 이름이 그대로 뜬다.
+ *
+ * EIP-6963 으로 발견된 지갑이 있으면 이름·아이콘이 있는 그것들만 쓴다. 일반 `injected`
+ * 커넥터는 "어느 지갑인지 알 수 없는" 항목이라 같이 보이면 혼란스럽고, 6963 을 안 쓰는
+ * 지갑만 있는 환경에서는 폴백으로 남는다.
  */
 function pickable(connectors: readonly Connector[]): readonly Connector[] {
-  const discovered = connectors.filter((c) => c.id !== "injected");
-  return discovered.length > 0 ? discovered : connectors;
+  const announced = connectors.filter((c) => c.id !== "injected");
+  const usable = announced.filter((c) => !isMetaMask(c));
+  if (usable.length > 0) return usable;
+
+  // ⚠️ 6963 에 MetaMask 만 있으면 일반 `injected` 폴백도 **같은 MetaMask** 다
+  //    (`window.ethereum` 이 그것이다). 이걸 남기면 "브라우저 지갑 연결" 로 MetaMask 가
+  //    뒷문으로 연결된다 — 목록에서 지운 의미가 없어진다.
+  //    `window.ethereum.isMetaMask` 로 판별하지 않는 이유: Rabby 도 호환을 위해 그 플래그를
+  //    참으로 둬서 신뢰할 수 없다.
+  if (announced.some(isMetaMask)) return [];
+
+  // 6963 을 announce 하지 않는 지갑만 있는 환경 — 폴백을 남긴다
+  return connectors.filter((c) => !isMetaMask(c));
 }
