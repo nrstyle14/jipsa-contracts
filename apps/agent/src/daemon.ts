@@ -92,6 +92,24 @@ const fmt = (v: bigint) => `${formatUnits(v, TKRW_DECIMALS)} tKRW`;
 const stamp = () => new Date().toLocaleTimeString("ko-KR");
 const log = (s: string) => console.log(`[${stamp()}] ${s}`);
 
+/**
+ * 다음 주기에 재시도해도 똑같이 막히는 사유들.
+ *
+ * 일간/총예산 한도와 철회·만료는 시간이나 주인의 개입 없이는 풀리지 않는다. 계속 시도하면
+ * 가스만 태우고 피드를 실패로 채운다 — 멈추고 상태에 남긴다.
+ * (레이트 리밋은 여기 넣지 않는다 — 잠시 후 풀린다)
+ */
+const PAUSING_REASONS = [
+  "CannotUseADisabledDelegation",
+  "ERC20PeriodTransferEnforcer:transfer-amount-exceeded",
+  "ERC20TransferAmountEnforcer:allowance-exceeded",
+  "TimestampEnforcer:expired-delegation",
+];
+
+function isPausing(reason: string | undefined): boolean {
+  return Boolean(reason) && PAUSING_REASONS.includes(reason!);
+}
+
 /** 레이트 리밋인지 — 이 경우는 오류가 아니라 "잠시 후 다시"로 다뤄야 한다 */
 function isRateLimited(e: unknown): boolean {
   const m = e instanceof Error ? e.message : String(e);
@@ -154,6 +172,13 @@ const state = {
   rateLimited: false,
   rateLimitedUntil: undefined as string | undefined,
   lastError: undefined as string | undefined,
+  /**
+   * 스스로 낫지 않는 정책 차단으로 주기 결제를 멈춘 이유.
+   *
+   * 일간 한도가 바닥나면 그대로 두면 30초마다 실패 tx 를 만들어 가스만 태운다
+   * (실측: 에이전트 ETH 0.001 → 0.00054). 위임이 바뀌면 자동으로 풀린다.
+   */
+  pausedReason: undefined as string | undefined,
   /** 인젝션 시도 결과 — 대시보드 토스트가 참고한다 */
   lastInjectionAt: undefined as string | undefined,
   lastInjectionBlocked: [] as Blocked[],
@@ -428,6 +453,11 @@ async function payCycle(c: Clients, d: Delegation, cli: Cli, why: string) {
   if (r.kind === "blocked") {
     state.lastError = `차단됨: ${r.label ?? r.reason ?? "사유 미확인"}`;
     log(`${why} 결제 ✗ 차단됨: ${r.label ?? r.reason}`);
+    if (isPausing(r.reason)) {
+      state.pausedReason = r.label ?? r.reason;
+      log(`주기 결제를 멈춥니다 — 재시도해도 같은 사유로 막힙니다 (${r.reason}).`);
+      log("  위임을 새로 발급해 delegation.json 을 갈아끼우면 자동으로 재개합니다.");
+    }
     return { ok: false, blocked: r.reason };
   }
   state.lastError = r.message;
@@ -471,8 +501,14 @@ async function main() {
       state.delegationHash = hash;
       state.waitingForDelegation = !d;
       log(d ? `위임 갱신 ${hash}` : "위임이 사라졌습니다 — 대기 중");
+      // 새 위임은 enforcer 상태가 비어 있다 (해시가 키다) → 멈춤을 푼다
+      if (state.pausedReason) {
+        state.pausedReason = undefined;
+        log("주기 결제를 재개합니다.");
+      }
     }
     if (!d) continue;
+    if (state.pausedReason) continue;
     if (state.busy) continue; // 대시보드 요청과 겹치지 않게
 
     state.busy = true;
