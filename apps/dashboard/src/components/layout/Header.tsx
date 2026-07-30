@@ -26,7 +26,7 @@ export function Header() {
     <header className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-3">
       {why && <WhyDelegationAccountModal onClose={() => setWhy(false)} />}
       <div className="flex items-center gap-2.5">
-        <Logo className="h-7 w-7 text-red" />
+        <Logo className="h-7 w-7 shrink-0 text-red" />
         <span className="text-base font-bold tracking-tight">JIPSA 관제</span>
       </div>
 

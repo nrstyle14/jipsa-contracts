@@ -16,8 +16,8 @@ export function Logo({ className = "" }: { className?: string }) {
     <svg
       viewBox="0 0 100 100"
       className={className}
-      role="img"
-      aria-label="JIPSA"
+      // 옆에 "JIPSA 관제" 텍스트가 있으므로 장식으로 둔다 — 이름을 두 번 읽히면 안 된다
+      aria-hidden="true"
       fill="none"
       stroke="currentColor"
       strokeWidth={14.5}
